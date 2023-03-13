@@ -5,6 +5,7 @@ authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
 homepage = "https://oooutlk.github.io/tk/"
+description = "Rust bindings for Tk commands"
 
 [dependencies]
 bitflags = "1.0"
