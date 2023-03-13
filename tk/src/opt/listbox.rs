@@ -1,0 +1,40 @@
+def_widget_opts! {
+    TkListboxOpt: (
+        // standard
+        TkBackground,
+        TkBg,
+        TkBorderWidth,
+        TkBd,
+        TkCursor,
+        TkDisabledForeground,
+        TkExportSelection,
+        TkFont,
+        TkForeground,
+        TkHighlightBackground,
+        TkHighlightColor,
+        TkHighlightThickness,
+        TkJustify,
+        TkRelief,
+        TkSelectBackground,
+        TkSelectBorderWidth,
+        TkSelectForeground,
+        TkSetGrid,
+        TkTakeFocus,
+        TkXScrollCommand,
+        TkYScrollCommand,
+
+        // widget-specific
+        TkActiveStyle,
+        TkHeight,
+        TkListVariable,
+        TkSelectMode,
+        TkState,
+        TkWidth,
+    ),
+    TkListboxItemOpt: (
+        TkBackground,
+        TkForeground,
+        TkSelectBackground,
+        TkSelectForeground,
+    ),
+}

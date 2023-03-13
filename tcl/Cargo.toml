@@ -1,0 +1,39 @@
+[package]
+name = "tcl"
+version = "0.1.0"
+authors = ["oooutlk <oooutlk@outlook.com>"]
+edition = "2021"
+license = "MIT/Apache-2.0"
+
+[dependencies]
+clib = "0.2"
+mutf8 = "0.2.0"
+tuplex = "0.1"
+serde = { version = "1.0", features=["derive"] }
+serde_derive = "1.0"
+tcl_derive = { path = "../tcl_derive" }
+enumx = "0.4"
+cex = "0.5"
+structx = "0.1"
+
+[package.metadata.inwelling]
+structx = true
+
+[package.metadata.inwelling.clib]
+build = ["tcl86"]
+
+[package.metadata.inwelling.clib.spec.tcl86]
+pc-alias = ["tcl"]
+headers = ["tcl.h"]
+exe = ["tclsh86", "tclsh"]
+includedir = ["tcl8.6", "tcl"]
+
+[package.metadata.inwelling.clib.spec.tcl86.libs]
+tcl = ["libtcl86.so", "libtcl8.6.so", "libtcl.so", "libtcl86.a", "libtcl.a", "libtcl86.dll.a", "libtcl.dll.a", "tcl86t.dll", "tcl86t.lib"]
+tclstub = ["libtclstub86.a", "libtclstub8.6.a", "libtclstub.a", "tclstub86.lib"]
+
+[features]
+cex_log = ["cex/log"]
+cex_env_log = ["cex/env_log"]
+cex_pretty_log = ["cex/pretty_log"]
+cex_enum32 = ["cex/enum32"]

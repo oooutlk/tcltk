@@ -1,0 +1,42 @@
+def_widget_opts! {
+    TkPanedwindowOpt: (
+        // standard
+        TkBackground,
+        TkBg,
+        TkBorderWidth,
+        TkBd,
+        TkCursor,
+        TkOrient,
+        TkRelief,
+        TkTakeFocus,
+        TkText,
+        TkTextVariable,
+
+        // widget-specific
+        TkHandlePad,
+        TkHandleSize,
+        TkHeight,
+        TkOpaqueResize,
+        TkProxyBackground,
+        TkProxyBorderWidth,
+        TkProxyRelief,
+        TkSashCursor,
+        TkSashPad,
+        TkSashRelief,
+        TkSashWidth,
+        TkShowHandle,
+        TkWidth,
+    ),
+    TkPaneConfigureOpt: (
+        TkAfter,
+        TkBefore,
+        TkHeight,
+        TkHide,
+        TkMinSize,
+        TkPadX,
+        TkPadY,
+        TkSticky,
+        TkStretch,
+        TkWidth,
+    ),
+}

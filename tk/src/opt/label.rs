@@ -1,0 +1,36 @@
+def_widget_opts! {
+    TkLabelOpt: (
+        // standard
+        TkActiveBackground,
+        TkActiveForeground,
+        TkAnchor,
+        TkBackground,
+        TkBg,
+        TkBitmap,
+        TkBorderWidth,
+        TkBd,
+        TkCompound,
+        TkCursor,
+        TkDisabledForeground,
+        TkFont,
+        TkForeground,
+        TkHighlightBackground,
+        TkHighlightColor,
+        TkHighlightThickness,
+        TkImage,
+        TkJustify,
+        TkPadX,
+        TkPadY,
+        TkRelief,
+        TkTakeFocus,
+        TkText,
+        TkTextVariable,
+        TkUnderline,
+        TkWrapLength,
+
+        // widget-specific
+        TkHeight,
+        TkState,
+        TkWidth,
+    ),
+}

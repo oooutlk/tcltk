@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "tcl",
+    "tcl_derive",
+    "tk",
+]

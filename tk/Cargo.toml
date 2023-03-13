@@ -1,0 +1,52 @@
+[package]
+name = "tk"
+version = "0.1.0"
+authors = ["oooutlk <oooutlk@outlook.com>"]
+edition = "2021"
+license = "MIT/Apache-2.0"
+homepage = "https://oooutlk.github.io/tk/"
+
+[dependencies]
+bitflags = "1.0"
+enumx = "0.4"
+cex = "0.5"
+clib = "0.2"
+heredom = "0.1"
+serde = { version = "1.0", features=["derive"] }
+tcl = { path = "../tcl", version = "0.1.0", default-features = false }
+tcl_derive = { path = "../tcl_derive", version = "0.1.0" }
+tuplex = "0.1"
+strum = "0.19"
+strum_macros = "0.19"
+structx = "0.1"
+
+[features]
+libtk = []
+cex_log = ["cex/log", "tcl/cex_log"]
+cex_env_log = ["cex/env_log", "tcl/cex_env_log"]
+cex_pretty_log = ["cex/pretty_log", "tcl/cex_pretty_log"]
+cex_enum32 = ["cex/enum32", "tcl/cex_enum32"]
+
+[dev-dependencies]
+regex = "1.7.1"
+
+[package.metadata.inwelling]
+structx = true
+
+[package.metadata.inwelling-clib]
+feature = "libtk"
+
+[package.metadata.inwelling.clib]
+build = ["tk86"]
+
+[package.metadata.inwelling.clib.spec.tk86]
+pc-alias = ["tk"]
+headers = ["tk.h"]
+dependencies = ["tcl86"]
+header-dependencies = ["x11"]
+exe = ["wish86", "wish"]
+includedir = ["tk8.6", "tk"]
+
+[package.metadata.inwelling.clib.spec.tk86.libs]
+tk = ["libtk86.so", "libtk8.6.so", "libtk.so", "libtk86.a", "libtk.a", "libtk86.dll.a", "libtk.dll.a", "tk86t.dll", "tk86t.lib"]
+tkstub = ["libtkstub86.a", "libtkstub8.6.a", "libtkstub.a", "tkstub86.lib"]
