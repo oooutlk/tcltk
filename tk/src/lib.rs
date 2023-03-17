@@ -129,7 +129,7 @@
 //! to which this crate provides bindings. Which is more important, 100% document coverage, or rapid development?
 //! It is a pity that `cargo doc` produces little content here, but lucky for me to be sane.
 //!
-//! # The Tutorial book
+//! # The tutorial book
 //!
 //! Luckily, I've got enough time to translate in Rust the [Tk tutorial](https://oooutlk.github.io/tk/).
 
