@@ -5,13 +5,12 @@ use crate::{
         DeError,
         InterpError,
     },
+    types::TkRGB,
 };
 
 use std::{
     path::Path,
 };
-
-use structx::*;
 
 use tcl::{
     Obj,
@@ -95,12 +94,12 @@ impl<Inst:TkInstance> Photo<Inst> {
     }
 
     #[cex]
-    pub fn get( &self, x: c_int, y: c_int ) -> Result!( Structx!{ red: u8, green: u8, blue: u8 }
+    pub fn get( &self, x: c_int, y: c_int ) -> Result!( TkRGB
         throws DeError, InterpError )
     {
         let obj = self.tk().eval(( self.name.clone(), "get", x, y ))?;
         let ( red, green, blue ) = from_obj::<(u8,u8,u8)>( obj )?;
-        Ok( structx!{ red, green, blue })
+        Ok( TkRGB( red as u16, green as u16, blue as u16 ))
     }
 
     pub fn put<Opts>( &self, data: Obj, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<()>

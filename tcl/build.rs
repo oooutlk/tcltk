@@ -1,1 +1,3 @@
-fn main() { inwelling::register(); }
+fn main() {
+    inwelling::to( "clib" );
+}

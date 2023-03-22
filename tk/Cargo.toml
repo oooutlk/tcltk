@@ -1,6 +1,6 @@
 [package]
 name = "tk"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -13,18 +13,18 @@ description = "Rust bindings for Tk commands"
 bitflags = "1.0"
 enumx = "0.4"
 cex = "0.5"
-clib = "0.2.3"
+clib = "0.2.4"
 heredom = "0.1"
 serde = { version = "1.0", features=["derive"] }
-tcl = { path = "../tcl", version = "0.1.0", default-features = false }
+tcl = { path = "../tcl", version = "0.1.2" }
 tcl_derive = { path = "../tcl_derive", version = "0.1.0" }
 tuplex = "0.1"
 strum = "0.19"
 strum_macros = "0.19"
-structx = "0.1.7"
+once_cell = "1.17.1"
 
 [build-dependencies]
-inwelling = "0.4"
+inwelling = "0.5"
 
 [dev-dependencies]
 regex = "1.7.1"
@@ -35,9 +35,6 @@ cex_log = ["cex/log", "tcl/cex_log"]
 cex_env_log = ["cex/env_log", "tcl/cex_env_log"]
 cex_pretty_log = ["cex/pretty_log", "tcl/cex_pretty_log"]
 cex_enum32 = ["cex/enum32", "tcl/cex_enum32"]
-
-[package.metadata.inwelling]
-structx = true
 
 [package.metadata.inwelling.clib]
 build = ["tk86"]

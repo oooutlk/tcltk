@@ -1,6 +1,6 @@
 [package]
 name = "tcl"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -9,7 +9,7 @@ categories = [ "api-bindings" ]
 description = "Rust bindings for Tcl language"
 
 [dependencies]
-clib = "0.2.3"
+clib = "0.2.4"
 mutf8 = "0.2.0"
 tuplex = "0.1"
 serde = { version = "1.0", features=["derive"] }
@@ -17,13 +17,9 @@ serde_derive = "1.0"
 tcl_derive = { path = "../tcl_derive", version = "0.1.0" }
 enumx = "0.4"
 cex = "0.5"
-structx = "0.1.7"
 
 [build-dependencies]
-inwelling = "0.4"
-
-[package.metadata.inwelling]
-structx = true
+inwelling = "0.5"
 
 [package.metadata.inwelling.clib]
 build = ["tcl86"]
@@ -33,6 +29,7 @@ pc-alias = ["tcl"]
 headers = ["tcl.h"]
 exe = ["tclsh86", "tclsh"]
 includedir = ["tcl8.6", "tcl"]
+for-docs-rs = "for_docs.rs"
 
 [package.metadata.inwelling.clib.spec.tcl86.libs]
 tcl = ["libtcl86.so", "libtcl8.6.so", "libtcl.so", "libtcl86.a", "libtcl.a", "libtcl86.dll.a", "libtcl.dll.a", "tcl86t.dll", "tcl86t.lib"]

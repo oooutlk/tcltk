@@ -12,7 +12,10 @@ use crate::{
     interp::*,
 };
 
-use structx::*;
+pub struct OpCommand {
+    pub op      : Obj,
+    pub command : Obj,
+}
 
 impl Interp {
     pub fn trace_add_command_rename( &self, name: impl Into<Obj>, command: impl Into<Obj> ) -> Result<()> {
@@ -96,10 +99,10 @@ impl Interp {
     }
 
     #[cex]
-    pub fn trace_info_command( &self, name: impl Into<Obj> ) -> Result!( Vec<Structx!{ op: Obj, command: Obj }>
+    pub fn trace_info_command( &self, name: impl Into<Obj> ) -> Result!( Vec<OpCommand>
         throws DeError, InterpError )
     {
-        let elems = self.eval(( "trace", "info", "command", name ))?
+        let elems =  self.eval(( "trace", "info", "command", name ))?
             .get_elements()
             .map_err( |err| DeError::new( DeKind::NotList, err.0 ))?;
 
@@ -121,17 +124,17 @@ impl Interp {
             if remaining != 0 {
                 throw!( DeError::new( DeKind::ListLen{ expected: 2, got: 2+remaining }, e ));
             }
-            info.push( structx!{ op, command });
+            info.push( OpCommand{ op, command });
         }
 
         Ok( info )
     }
 
     #[cex]
-    pub fn trace_info_execution( &self, name: impl Into<Obj> ) -> Result!( Vec<Structx!{ op: Obj, command: Obj }>
+    pub fn trace_info_execution( &self, name: impl Into<Obj> ) -> Result!( Vec<OpCommand>
         throws DeError, InterpError )
     {
-        let elems = self.eval(( "trace", "info", "execution", name ))?
+        let elems =  self.eval(( "trace", "info", "execution", name ))?
             .get_elements()
             .map_err( |err| DeError::new( DeKind::NotList, err.0 ))?;
 
@@ -153,17 +156,17 @@ impl Interp {
             if remaining != 0 {
                 throw!( DeError::new( DeKind::ListLen{ expected: 2, got: 2+remaining }, e ));
             }
-            info.push( structx!{ op, command });
+            info.push( OpCommand{ op, command });
         }
 
         Ok( info )
     }
 
     #[cex]
-    pub fn trace_info_variable( &self, name: impl Into<Obj> ) -> Result!( Vec<Structx!{ op: Obj, command: Obj }>
+    pub fn trace_info_variable( &self, name: impl Into<Obj> ) -> Result!( Vec<OpCommand>
         throws DeError, InterpError )
     {
-        let elems = self.eval(( "trace", "info", "variable", name ))?
+        let elems =  self.eval(( "trace", "info", "variable", name ))?
             .get_elements()
             .map_err( |err| DeError::new( DeKind::NotList, err.0 ))?;
 
@@ -185,7 +188,7 @@ impl Interp {
             if remaining != 0 {
                 throw!( DeError::new( DeKind::ListLen{ expected: 2, got: 2+remaining }, e ));
             }
-            info.push( structx!{ op, command });
+            info.push( OpCommand{ op, command });
         }
 
         Ok( info )

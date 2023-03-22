@@ -137,6 +137,8 @@ use enumx::export::*;
 use enumx::predefined::*;
 use cex::*;
 
+use once_cell::sync::Lazy;
+
 pub(crate) use std::{
     any::TypeId,
     cell::{Cell, RefCell},
@@ -145,6 +147,7 @@ pub(crate) use std::{
     mem,
     ops::Deref,
     os::raw::c_int,
+    sync::Mutex,
 };
 
 #[cfg( feature = "libtk" )]
@@ -504,7 +507,6 @@ impl<Inst:TkInstance> Deref for Tk<Inst> {
             }
             unreachable!()
         })
-
     }
 }
 
@@ -523,6 +525,8 @@ thread_local! {
     };
 }
 
+static MUTEX: Lazy<Mutex<()>> = Lazy::new( || Mutex::new(()) );
+
 const TK_INIT_SCRIPT: &'static str = r#"
 package require Tk
 proc tk_rs_option_menu {pathName varName items} {
@@ -536,9 +540,13 @@ impl<Inst> Tk<Inst>
 {
     /// Creates a new instance of Tk.
     /// The recommended invocation is `Tk::new(||{})`.
+    ///
+    /// Note: the `inst` is assigned at COMPILE TIME.
+    /// If your program needs multiple tk instances, make sure they can be assigned different `inst` at compile time.
     #[cex]
     pub fn new( inst: Inst ) -> Result!( Tk<Inst> throws InterpError, NullInterp, TclInitError ) {
         let tk_type_id = TypeId::of::<Inst>();
+
         let not_unique = TK_INSTANCES.with( |instances| instances
             .borrow()
             .iter()
@@ -553,7 +561,9 @@ impl<Inst> Tk<Inst>
         let interpreter = Interpreter::new()?;
 
         if interpreter.eval( "package present Tk" ).is_err() {
+            let m = crate::MUTEX.lock();
             interpreter.eval( TK_INIT_SCRIPT )?;
+            m.ok();
         }
 
         let tk = Tk{ inst, mark: NOT_SEND_SYNC };
