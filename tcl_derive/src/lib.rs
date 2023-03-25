@@ -44,7 +44,7 @@ impl VisitMut for TclProc {
         let is_variadic = variadic.is_some();
 
         let mut inputs: Punctuated<FnArg,Comma> = parse_quote!(
-            __client_data: clib::ClientData, __tcl_interp: *mut clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut clib::Tcl_Obj
+            __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj
         );
         if inputs == item_fn.sig.inputs {
             return;
@@ -59,12 +59,12 @@ impl VisitMut for TclProc {
 
         let mut body: Block = parse_quote! {{
             let mut __interp = unsafe{ tcl::Interp::from_raw( __tcl_interp ).unwrap() };
-            let __origin_objs: &[*mut clib::Tcl_Obj] = unsafe{ std::slice::from_raw_parts( __objv.offset(1), (__objc-1) as usize )};
+            let __origin_objs: &[*mut tcl::reexport_clib::Tcl_Obj] = unsafe{ std::slice::from_raw_parts( __objv.offset(1), (__objc-1) as usize )};
             if __origin_objs.len() != #argc {
                 if __origin_objs.len() < #argc || !#is_variadic {
                     unsafe {
-                        clib::Tcl_WrongNumArgs( __tcl_interp, 1, __objv, std::ptr::null() );
-                        tcl::CodeToResult::code_to_result( clib::TCL_ERROR as std::os::raw::c_int, &__interp )?;
+                        tcl::reexport_clib::Tcl_WrongNumArgs( __tcl_interp, 1, __objv, std::ptr::null() );
+                        tcl::CodeToResult::code_to_result( tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int, &__interp )?;
                     }
                 }
             }
@@ -72,12 +72,12 @@ impl VisitMut for TclProc {
             let mut __variadic_args = __origin_objs[#argc..].to_vec();
             use std::convert::TryFrom;
 
-            let mut __ref_objs = std::collections::HashMap::<&'static str, *mut clib::Tcl_Obj>::new();
+            let mut __ref_objs = std::collections::HashMap::<&'static str, *mut tcl::reexport_clib::Tcl_Obj>::new();
 
             macro_rules! tcl_invalidate_str_rep {
                 ($ident:ident) => {
                     __ref_objs.get( stringify!( $ident )).map( |tcl_obj| unsafe{
-                        clib::Tcl_InvalidateStringRep( *tcl_obj );
+                        tcl::reexport_clib::Tcl_InvalidateStringRep( *tcl_obj );
                     });
                 };
             }
@@ -154,13 +154,13 @@ impl VisitMut for TclProc {
             use tcl::UnwrapOrAbort;
 
             std::panic::catch_unwind( || {
-                let mut __tcl_completion_code: std::os::raw::c_int = clib::TCL_OK as std::os::raw::c_int;
+                let mut __tcl_completion_code: std::os::raw::c_int = tcl::reexport_clib::TCL_OK as std::os::raw::c_int;
 
                 #(#attrs)* fn __tcl_inner_proc( #tcl_inputs ) #output #body
 
                 __tcl_inner_proc( __client_data, __tcl_interp, __objc, __objv )
                 .map( |value| unsafe {
-                    clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() );
+                    tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() );
                 }).ok();
 
                 __tcl_completion_code
@@ -193,8 +193,8 @@ impl VisitMut for TclProc {
 ///
 /// # Purpose
 ///
-/// Generally, a Tcl command's function signature is `extern "C" fn( clib::ClientData, *mut clib::Tcl_Interp, c_int, *const *mut clib::Tcl_Obj ) -> c_int`, aka `ObjCmdProc`.
-/// Arguments are stored in an array of `clib::Tcl_Obj`, and must be converted to real types before using them, which is boring.
+/// Generally, a Tcl command's function signature is `extern "C" fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> c_int`, aka `ObjCmdProc`.
+/// Arguments are stored in an array of `tcl::reexport_clib::Tcl_Obj`, and must be converted to real types before using them, which is boring.
 ///
 /// With the help of the `#[proc]` attribute, The translation of function signatures and conversions of arguments are generated behind the proc macros.
 ///
@@ -449,14 +449,14 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
 
     let mut body: Block = parse_quote! {{
         let mut __interp = unsafe{ tcl::Interp::from_raw( __tcl_interp ).unwrap() };
-        let __origin_objs: &[*mut clib::Tcl_Obj] = unsafe{ std::slice::from_raw_parts( __objv.offset(1), (__objc-1) as usize )};
+        let __origin_objs: &[*mut tcl::reexport_clib::Tcl_Obj] = unsafe{ std::slice::from_raw_parts( __objv.offset(1), (__objc-1) as usize )};
 
         if __origin_objs.len() != #argc {
             if __origin_objs.len() < #argc || !#is_variadic {
                 unsafe {
-                    clib::Tcl_WrongNumArgs( __tcl_interp, 1, __objv, std::ptr::null() );
+                    tcl::reexport_clib::Tcl_WrongNumArgs( __tcl_interp, 1, __objv, std::ptr::null() );
                     use tcl::CodeToResult;
-                    tcl::CodeToResult::code_to_result( clib::TCL_ERROR as std::os::raw::c_int, &__interp )?;
+                    tcl::CodeToResult::code_to_result( tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int, &__interp )?;
                 }
             }
         }
@@ -465,12 +465,12 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
         let mut __variadic_args = __origin_objs[#argc..].to_vec();
         use std::convert::TryFrom;
 
-        let mut __ref_objs = std::collections::HashMap::<&'static str, *mut clib::Tcl_Obj>::new();
+        let mut __ref_objs = std::collections::HashMap::<&'static str, *mut tcl::reexport_clib::Tcl_Obj>::new();
 
         macro_rules! tcl_invalidate_str_rep {
             ($ident:ident) => {
                 __ref_objs.get( stringify!( $ident )).map( |tcl_obj| unsafe{
-                    clib::Tcl_InvalidateStringRep( *tcl_obj );
+                    tcl::reexport_clib::Tcl_InvalidateStringRep( *tcl_obj );
                 });
             };
         }
@@ -533,33 +533,33 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
     body.stmts.extend( existing_stmts );
 
     let expanded = quote! {{
-        extern "C" fn #ident( __client_data: clib::ClientData, __tcl_interp: *mut clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut clib::Tcl_Obj ) -> std::os::raw::c_int {
-            let closure: &mut Box<dyn Fn( clib::ClientData, *mut clib::Tcl_Interp, std::os::raw::c_int, *const *mut clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
+        extern "C" fn #ident( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
+            let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
             match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
                 Ok( value ) => {
-                    unsafe{ clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
-                    clib::TCL_OK as std::os::raw::c_int
+                    unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
+                    tcl::reexport_clib::TCL_OK as std::os::raw::c_int
                 },
-                Err( _ ) => clib::TCL_ERROR as std::os::raw::c_int,
+                Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
             }
         }
 
-        extern "C" fn __deleter( __client_data: clib::ClientData ) {
-            let _: Box<Box<dyn Fn( clib::ClientData, *mut clib::Tcl_Interp, std::os::raw::c_int, *const *mut clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
+        extern "C" fn __deleter( __client_data: tcl::reexport_clib::ClientData ) {
+            let _: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
         }
 
         fn __box_new_static_closure<F>( f: F ) -> Box<F>
-            where F: 'static + Fn( clib::ClientData, *mut clib::Tcl_Interp, std::os::raw::c_int, *const *mut clib::Tcl_Obj ) -> #output
+            where F: 'static + Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> #output
         {
             Box::new( f )
         }
 
-        let closure: Box<Box<dyn Fn( clib::ClientData, *mut clib::Tcl_Interp, std::os::raw::c_int, *const *mut clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
+        let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
             #(#attrs)*
             #[allow( unused_macros )]
-            #capture |__client_data: clib::ClientData, __tcl_interp: *mut clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut clib::Tcl_Obj| -> #output #body
+            #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
         ));
-        let client_data = Box::into_raw( closure ) as clib::ClientData;
+        let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
 
         let cmd = #cmd;
         unsafe{ (#interp).def_proc_with_client_data( cmd, #ident, client_data, Some( __deleter )); }
