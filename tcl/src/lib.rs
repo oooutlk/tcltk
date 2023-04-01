@@ -143,6 +143,22 @@
 //! # Ok::<(),TclError>(())
 //! ```
 
+/// The following items will be seen in `tcl_derive`'s proc macros.
+/// Let's reexport them from `crate clib`,
+/// otherwise the `crate tcl`'s users will depend on `clib` too.
+pub mod reexport_clib {
+    pub use clib::{
+        ClientData,
+        TCL_ERROR,
+        TCL_OK,
+        Tcl_Interp,
+        Tcl_InvalidateStringRep,
+        Tcl_Obj,
+        Tcl_SetObjResult,
+        Tcl_WrongNumArgs,
+    };
+}
+
 pub use tcl_derive::{
     TryFromDe,
     proc,
