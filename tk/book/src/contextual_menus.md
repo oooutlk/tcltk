@@ -48,18 +48,18 @@ fn main() -> TkResult<()> {
         menu.add_command( -label(i) )?;
     }
 
-    tclosure!( tk, cmd: "handler", args: "%X %Y",
-            move |x: c_int, y: c_int| -> TkResult<()> {
-                Ok( tk.popup( menu, x, y, None )? )
-            }
+    let handler = tclosure!( tk, cmd: "handler", args: "%X %Y",
+        move |x: c_int, y: c_int| -> TkResult<()> {
+            Ok( tk.popup( menu, x, y, None )? )
+        }
     );
 
     use event::*;
     if tk.windowing_system()? == TkWindowingSystem::Aqua {
-        root.bind( button_press_2(), "handler" )?;
-        root.bind( control().button_press_1(), "handler" )?;
+        root.bind( button_press_2(), &*handler )?;
+        root.bind( control().button_press_1(), &*handler )?;
     } else {
-        root.bind( button_press_3(), "handler" )?;
+        root.bind( button_press_3(), &*handler )?;
     }
 
     Ok( main_loop() )

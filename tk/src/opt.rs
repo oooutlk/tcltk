@@ -378,7 +378,7 @@ def_opts! {
 }
 
 macro_rules! def_widget_opts {
-    ($($widget_opt:ident: ($($opt:ident,)*),)+) => {$(
+    ($($widget_opt:ident: ($($opt:path,)*),)+) => {$(
         pub struct $widget_opt( crate::OptPair );
 
         $(

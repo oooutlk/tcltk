@@ -152,7 +152,7 @@ impl Interp {
     /// Additional options can be specified using flags `TCL_EVAL_GLOBAL` and `TCL_EVAL_DIRECT`.
     pub fn eval_with_flags( &self, code: impl Into<Obj>, flags: c_int ) -> Result<Obj> {
         let code = code.into();
-        eprintln!( "{}", code.get_string() );
+        #[cfg( debug_assertions )] println!( "{}", code );
 
         unsafe {
             clib::Tcl_EvalObjEx( self.0.as_ptr(), code.as_ptr(), flags ).code_to_result( self )?;

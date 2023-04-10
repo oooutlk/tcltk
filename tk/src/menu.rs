@@ -5,8 +5,11 @@ use crate::{
     Tk,
     TkInstance,
     TkOption,
+    UpcastableWidget,
     Widget,
+    CreatedWidgets,
     opt::{
+        TkMenuOpt,
         TkMenuEntryOpt,
         OptPair,
     },
@@ -18,8 +21,11 @@ use crate::{
     traits::Delete,
 };
 
+use heredom::{DomForest, Visit};
+
 use std::{
     ops::{
+        Deref,
         RangeFrom,
         RangeInclusive,
         RangeToInclusive,
@@ -311,4 +317,255 @@ impl<Inst:TkInstance> self::TkMenu<Inst> {
 
 impl<Inst:TkInstance> Delete<Inst> for TkMenu<Inst> {
     type Index = Index;
+}
+
+def_functions! {
+    cascade     CascadeFn       ;
+    checkbutton CheckbuttonFn   ;
+    command     CommandFn       ;
+    radiobutton RadiobuttonFn   ;
+    separator   SeparatorFn     ;
+}
+
+def_tuple_notation!( "menu::cascade"      => CascadeTup       CascadeFn       CascadeOpt      );
+def_tuple_notation!( "menu::checkbutton"  => CheckbuttonTup   CheckbuttonFn   CheckbuttonOpt  );
+def_tuple_notation!( "menu::command"      => CommandTup       CommandFn       CommandOpt      );
+def_tuple_notation!( "menu::radiobutton"  => RadiobuttonTup   RadiobuttonFn   RadiobuttonOpt  );
+def_tuple_notation!( "menu::separator"    => SeparatorTup     SeparatorFn     SeparatorOpt    );
+
+def_widget_opts! {
+    CascadeOpt: (
+        // standard
+        crate::opt::TkActiveBackground,
+        crate::opt::TkActiveBorderWidth,
+        crate::opt::TkActiveForeground,
+        crate::opt::TkBackground,
+        crate::opt::TkBg,
+        crate::opt::TkBorderWidth,
+        crate::opt::TkBd,
+        crate::opt::TkCursor,
+        crate::opt::TkDisabledForeground,
+        crate::opt::TkFont,
+        crate::opt::TkForeground,
+        crate::opt::TkRelief,
+        crate::opt::TkTakeFocus,
+
+        // widget-specific
+        crate::opt::TkPostCommand,
+        crate::opt::TkTearOff,
+        crate::opt::TkTearOffCommand,
+        crate::opt::TkTitle,
+        crate::opt::TkType,
+
+        // TkMenuEntryOpt
+        crate::opt::TkAccelerator,
+        crate::opt::TkBitmap,
+        crate::opt::TkColumnBreak,
+        crate::opt::TkCommand,
+        crate::opt::TkCompound,
+        crate::opt::TkHideMargin,
+        crate::opt::TkImage,
+        crate::opt::TkLabel,
+        crate::opt::TkState,
+        crate::opt::TkUnderline,
+    ),
+    CheckbuttonOpt: (
+        crate::opt::TkAccelerator,
+        crate::opt::TkActiveBackground,
+        crate::opt::TkActiveForeground,
+        crate::opt::TkBackground,
+        crate::opt::TkBitmap,
+        crate::opt::TkColumnBreak,
+        crate::opt::TkCommand,
+        crate::opt::TkCompound,
+        crate::opt::TkFont,
+        crate::opt::TkForeground,
+        crate::opt::TkHideMargin,
+        crate::opt::TkImage,
+        crate::opt::TkIndicatorOn,
+        crate::opt::TkLabel,
+        crate::opt::TkOffValue,
+        crate::opt::TkOnValue,
+        crate::opt::TkSelectColor,
+        crate::opt::TkSelectImage,
+        crate::opt::TkState,
+        crate::opt::TkUnderline,
+        crate::opt::TkVariable,
+    ),
+    CommandOpt: (
+        crate::opt::TkAccelerator,
+        crate::opt::TkActiveBackground,
+        crate::opt::TkActiveForeground,
+        crate::opt::TkBackground,
+        crate::opt::TkBitmap,
+        crate::opt::TkColumnBreak,
+        crate::opt::TkCommand,
+        crate::opt::TkCompound,
+        crate::opt::TkFont,
+        crate::opt::TkForeground,
+        crate::opt::TkHideMargin,
+        crate::opt::TkImage,
+        crate::opt::TkLabel,
+        crate::opt::TkState,
+        crate::opt::TkUnderline,
+        crate::opt::TkVariable,
+    ),
+    RadiobuttonOpt: (
+        crate::opt::TkAccelerator,
+        crate::opt::TkActiveBackground,
+        crate::opt::TkActiveForeground,
+        crate::opt::TkBackground,
+        crate::opt::TkBitmap,
+        crate::opt::TkColumnBreak,
+        crate::opt::TkCommand,
+        crate::opt::TkCompound,
+        crate::opt::TkFont,
+        crate::opt::TkForeground,
+        crate::opt::TkHideMargin,
+        crate::opt::TkImage,
+        crate::opt::TkIndicatorOn,
+        crate::opt::TkLabel,
+        crate::opt::TkSelectColor,
+        crate::opt::TkSelectImage,
+        crate::opt::TkState,
+        crate::opt::TkUnderline,
+        crate::opt::TkValue,
+        crate::opt::TkVariable,
+    ),
+    SeparatorOpt: (
+        crate::opt::TkColumnBreak,
+        crate::opt::TkCompound,
+        crate::opt::TkHideMargin,
+    ),
+}
+
+impl<Inst:TkInstance> AddMenus<Inst> for TkMenu<Inst> {}
+impl<Inst:TkInstance> AddMenus<Inst> for crate::TkMenubutton<Inst> {}
+impl<Inst:TkInstance> AddMenus<Inst> for crate::TkToplevel<Inst> {}
+impl<Inst:TkInstance> AddMenus<Inst> for crate::TkRoot<Inst> {}
+
+pub trait AddMenus<Inst>
+    where Self : Deref<Target=Widget<Inst>>
+        , Inst : TkInstance
+{
+    fn add_menus<Widgs,Opts,Shape>( &self, path_opts_widgets: PathOptsWidgets<Opts,Widgs> )
+        -> InterpResult<CreatedWidgets<Inst>>
+        where Opts: IntoHomoTuple<TkMenuOpt>
+                  + IntoHomoTuple<OptPair>
+            , Widgs: ConvertTuple
+            , <Widgs as ConvertTuple>::Output: DomForest::<(&'static str,&'static str),OptPair,Shape>
+    {
+        let path = path_opts_widgets.path;
+        let opts = path_opts_widgets.opts;
+        let widgets = path_opts_widgets.widgets.convert_tuple();
+
+        let mut created_widgets = CreatedWidgets::new( self.deref().path );
+
+        let top_menu = self.deref().add( "menu", PathOptsWidgets{ path, opts, widgets: () }).map( |w| TkMenu( w ))?;
+        self.deref().tk().run(( self.deref().path, "configure", "-menu", top_menu.0.path ))?;
+
+        let mut current_path = top_menu.0.path.to_owned();
+        let mut menu_cmd = Vec::<Obj>::new();
+        let mut add_cmd = Vec::<Obj>::new();
+        let mut is_cascade = false;
+        let mut is_branch = false;
+
+        DomForest::<(&'static str,&'static str),OptPair,Shape>::try_preorder( widgets, &mut |visit| -> InterpResult<()> {
+            match visit {
+                Visit::Branch( (cmd, path) ) => {
+                    is_branch = true;
+
+                    if cmd == "menu::cascade" {
+                        is_cascade = true;
+
+                        let parent_path = current_path.clone();
+                        current_path = self.deref().tk().next_path( &current_path, path );
+
+                        menu_cmd.push( "menu".into() );
+                        menu_cmd.push( current_path.as_str().into() );
+
+                        add_cmd.push( parent_path.as_str().into() );
+                        add_cmd.push( "add".into() );
+                        add_cmd.push( "cascade".into() );
+                        add_cmd.push( "-menu".into() );
+                        add_cmd.push( current_path.as_str().into() );
+                    } else {
+                        // should be an error
+                    }
+                },
+                Visit::Leaf( (mut cmd, path) ) => {
+                    is_branch = false;
+
+                    match cmd {
+                        "menu::cascade"     => is_cascade = true,
+                        "menu::command"     => { cmd = "command"    ; is_cascade = false; },
+                        "menu::separator"   => { cmd = "separator"  ; is_cascade = false; },
+                        "menu::checkbutton" => { cmd = "checkbutton"; is_cascade = false; },
+                        "menu::radiobutton" => { cmd = "radiobutton"; is_cascade = false; },
+                        _ => (),
+                    }
+                    if is_cascade {
+                        let parent_path = current_path.clone();
+                        current_path = self.deref().tk().next_path( &current_path, path );
+
+                        menu_cmd.push( "menu".into() );
+                        menu_cmd.push( current_path.as_str().into() );
+
+                        add_cmd.push( parent_path.as_str().into() );
+                        add_cmd.push( "add".into() );
+                        add_cmd.push( "cascade".into() );
+                        add_cmd.push( "-menu".into() );
+                        add_cmd.push( current_path.as_str().into() );
+                    } else {
+                        add_cmd.push( current_path.as_str().into() );
+                        add_cmd.push( "add".into() );
+                        add_cmd.push( cmd.into() );
+                    }
+                },
+                Visit::Frame => {
+                    current_path = Widget::<Inst>::compute_parent_path( &current_path );
+                },
+                Visit::AttrsStart( _len ) => (),
+                Visit::Attr( opt_pair ) => {
+                    let menu_opts = [
+                        "-activebackground", "-activeborderwidth", "-activeforeground",
+                        "-background", "-bg", "-borderwidth", "-bd",
+                        "-cursor", "-disabledforeground", "-font", "-foreground", "-relief",
+                        "-takefocus", "-postcommand", "-selectcolor", "-tearoff", "-tearoffcommand",
+                        "-title", "-type",
+                    ];
+                    let command = if is_cascade && menu_opts.contains( &opt_pair.name ) {
+                        &mut menu_cmd
+                    } else {
+                        &mut add_cmd
+                    };
+                    if opt_pair.name.len() > 0 {
+                        command.push( opt_pair.name.into() );
+                    }
+                    command.push( opt_pair.value );
+                },
+                Visit::AttrsEnd => {
+                    if !menu_cmd.is_empty() {
+                        self.tk().run( &*menu_cmd )?;
+                        menu_cmd.clear();
+                        created_widgets.widgets.push( UpcastableWidget {
+                            widget : Widget::from_name_unchecked( &current_path, self.tk().inst ),
+                            name   : "menu",
+                        });
+                        if !is_branch {
+                            // No `Visit::Frame` for `Visit::Leaf`
+                            current_path = Widget::<Inst>::compute_parent_path( &current_path );
+                        }
+                    }
+                    if !add_cmd.is_empty() {
+                        self.tk().run( &*add_cmd )?;
+                        add_cmd.clear();
+                    }
+                },
+            }
+            Ok(())
+        })?;
+
+        Ok( created_widgets )
+    }
 }

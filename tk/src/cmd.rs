@@ -4,10 +4,13 @@ use cex::*;
 
 use crate::*;
 use crate::error::*;
-use crate::opt;
-use crate::types::{TkCaret, TkWindowingSystem};
+use crate::{
+    opt,
+    types::{TkCaret, TkWindowingSystem},
+    query::CreatedWidgets,
+};
 
-use heredom::DomForest;
+use heredom::{DomForest, Visit};
 
 use tcl::{
     CodeToResult,
@@ -32,11 +35,53 @@ use tuplex::{
 
 use std::{
     collections::HashMap,
-    ops::{Neg,Sub},
     os::raw::{c_double, c_longlong},
     path::PathBuf,
     ptr::null_mut,
 };
+
+pub(crate) const WIDGET_NAMES : [&'static str; 36] = [
+    "button",
+    "canvas",
+    "checkbutton",
+    "entry",
+    "frame",
+    "label",
+    "labelframe",
+    "listbox",
+    "menu",
+    "menubutton",
+    "message",
+    "panedwindow",
+    "radiobutton",
+    "scale",
+    "scrollbar",
+    "spinbox",
+    "text",
+    "toplevel",
+    "ttk_button",
+    "ttk_checkbutton",
+    "ttk_combobox",
+    "ttk_entry",
+    "ttk_frame",
+    "ttk_label",
+    "ttk_labelframe",
+    "ttk_menubutton",
+    "ttk_notebook",
+    "ttk_panedwindow",
+    "ttk_progressbar",
+    "ttk_radiobutton",
+    "ttk_scale",
+    "ttk_scrollbar",
+    "ttk_separator",
+    "ttk_sizegrip",
+    "ttk_spinbox",
+    "ttk_treeview",
+];
+
+pub(crate) fn find_widget_name( name: &str ) -> Option<&'static str> {
+    WIDGET_NAMES.iter().find( |&widget_name| widget_name == &name ).copied()
+}
 
 /// The "base class" to which all Tk widgets `deref()`.
 #[derive( Copy, Clone )]
@@ -66,6 +111,10 @@ impl<Inst:TkInstance> Widget<Inst> {
         } else {
             Ok( None )
         }
+    }
+
+    pub(crate) fn from_name_unchecked( name: &str, inst: Inst ) -> Self {
+        Widget{ path: Tk::<Inst>::make_or_get_path( name ), inst, mark: NOT_SEND_SYNC }
     }
 
     pub(crate) fn do_configure<Opts>( &self, opts: PathOptsWidgets<Opts,()> ) -> InterpResult<()>
@@ -128,7 +177,8 @@ impl<Inst:TkInstance> Widget<Inst> {
     ///     Ok( main_loop() )
     /// }
     /// ```
-    pub fn add_widgets<Widgs,Shape>( &self, path_widgets: PathOptsWidgets<(),Widgs> ) -> InterpResult<()>
+    pub fn add_widgets<Widgs,Shape>( &self, path_widgets: PathOptsWidgets<(),Widgs> )
+        -> InterpResult<CreatedWidgets<Inst>>
         where Widgs: ConvertTuple
             , <Widgs as ConvertTuple>::Output: DomForest::<(&'static str,&'static str),OptPair,Shape>
     {
@@ -140,13 +190,13 @@ impl<Inst:TkInstance> Widget<Inst> {
 
         let mut geometry_stack = Vec::<GeometryFrame>::new();
 
-        use heredom::Visit;
-
         let mut current_path = self.path.to_string();
         let mut command = Vec::<Obj>::new();
         let mut is_geometry_manager = false;
 
         let widgets = path_widgets.widgets.convert_tuple();
+
+        let mut widget_query = CreatedWidgets::new( self.path );
 
         DomForest::<(&'static str,&'static str),OptPair,Shape>::try_preorder( widgets, &mut |visit| -> InterpResult<()> {
             match visit {
@@ -178,7 +228,6 @@ impl<Inst:TkInstance> Widget<Inst> {
                     command.push( next_path.into() );
                 },
                 Visit::Frame => {
-                    current_path = Widget::<Inst>::compute_parent_path( &current_path );
                     let mut is_geometry_manager = false;
                     geometry_stack.last_mut().map( |last| {
                         if last.depth == 0 {
@@ -195,7 +244,9 @@ impl<Inst:TkInstance> Widget<Inst> {
                         let mut geo_command = vec![ iter.next().unwrap() ];
                         geo_command.extend( slaves );
                         geo_command.extend( iter );
-                        self.tk().eval( geo_command )?;
+                        self.tk().run( geo_command )?;
+                    } else {
+                        current_path = Widget::<Inst>::compute_parent_path( &current_path );
                     }
                 },
                 Visit::AttrsStart( _len ) => (),
@@ -212,17 +263,24 @@ impl<Inst:TkInstance> Widget<Inst> {
                         geometry_stack.push( GeometryFrame{ command: current_command, slaves: Vec::new(), depth: 0 });
                         is_geometry_manager = false;
                     } else {
-                        self.tk().eval( current_command.clone() )?;
+                        let widget_name = current_command[0].to_string();
+                        self.tk().run( current_command )?;
+                        if let Some( name ) = find_widget_name( &widget_name ) {
+                            widget_query.widgets.push( UpcastableWidget {
+                                widget : Widget::from_name_unchecked( &current_path, self.tk().inst ),
+                                name   ,
+                            });
+                        }
                     }
                 },
             }
             Ok(())
         })?;
 
-        Ok(())
+        Ok( widget_query )
     }
 
-    fn compute_parent_path( path: &str ) -> String {
+    pub(crate) fn compute_parent_path( path: &str ) -> String {
         match path.rfind('.') {
             Some( last_dot ) => {
                 let parent = &path[ 0..last_dot ];
@@ -261,7 +319,7 @@ impl From<&'static str> for PathOptsWidgets<(),()> {
 
 macro_rules! def_hyphen_notation {
     ($ty:ident) => {
-        impl<T> Neg for $ty<T> {
+        impl<T> std::ops::Neg for $ty<T> {
             type Output = PathOptsWidgets<(), ($ty<T>,)>;
 
             fn neg( self ) -> Self::Output {
@@ -273,7 +331,7 @@ macro_rules! def_hyphen_notation {
             }
         }
 
-        impl<T> Sub<$ty<T>> for &'static str {
+        impl<T> std::ops::Sub<$ty<T>> for &'static str {
             type Output = PathOptsWidgets<(), ($ty<T>,)>;
 
             fn sub( self, rhs: $ty<T> ) -> Self::Output {
@@ -285,7 +343,7 @@ macro_rules! def_hyphen_notation {
             }
         }
 
-        impl<Opts,Widgs,T> Sub<$ty<T>> for PathOptsWidgets<Opts,Widgs>
+        impl<Opts,Widgs,T> std::ops::Sub<$ty<T>> for PathOptsWidgets<Opts,Widgs>
             where Widgs: PushBack<$ty<T>>
         {
             type Output = PathOptsWidgets<Opts, <Widgs as PushBack<$ty<T>>>::Output>;
@@ -672,10 +730,42 @@ impl<Inst:TkInstance> TkRoot<Inst> {
     {
         self.0.do_configure( opts.into() )
     }
+
+    pub fn as_toplevel( &self ) -> TkToplevel<Inst> {
+        TkToplevel( self.0 )
+    }
+
+    pub fn grab( &self ) -> InterpResult<()> {
+        self.0.tk().run(( "grab", self.0.path ))
+    }
+
+    pub fn grab_global( &self ) -> InterpResult<()> {
+        self.0.tk().run(( "grab", "-global", self.0.path ))
+    }
+
+    pub fn grab_set_current( &self ) -> InterpResult<()> {
+        self.0.tk().run(( "grab", "current", self.0.path ))
+    }
+
+    pub fn grab_release( &self ) -> InterpResult<()> {
+        self.0.tk().run(( "grab", "release", self.0.path ))
+    }
+
+    pub fn grab_set( &self ) -> InterpResult<()> {
+        self.0.tk().run(( "grab", "set", self.0.path ))
+    }
+
+    pub fn grab_set_global( &self ) -> InterpResult<()> {
+        self.0.tk().run(( "grab", "set", "-global", self.0.path ))
+    }
+
+    pub fn grab_status( &self ) -> InterpResult<()> {
+        self.0.tk().run(( "grab", "status", self.0.path ))
+    }
 }
 
-macro_rules! def_widgets {
-    ($($str:expr => $widget_type:ident $ty:ident $trait:ident $add_trait:ident $add:ident $widget_opt:ident;)+) => {$(
+macro_rules! def_tuple_notation {
+    ($str:expr => $ty:ident $trait:ident $valid_opt:path) => {
         pub struct $ty<Tup>( Tup );
 
         impl<Tup> Convert for $ty<Tup> {
@@ -685,10 +775,10 @@ macro_rules! def_widgets {
 
         impl<Opts,Widgs> $trait for PathOptsWidgets<Opts,Widgs>
             where Widgs: ConvertTuple
-                , Opts : IntoHomoTuple<opt::$widget_opt>
+                , Opts : IntoHomoTuple<$valid_opt>
                        + IntoHomoTuple<OptPair>
-                , <Widgs as ConvertTuple>::Output: PushFront<heredom::Node<(&'static str,&'static str),<Opts as IntoHomoTuple<OptPair>>::Output>>
-
+                , <Widgs as ConvertTuple>::Output
+                       : PushFront<heredom::Node<(&'static str,&'static str),<Opts as IntoHomoTuple<OptPair>>::Output>>
         {
             type Output = $ty<
                 <
@@ -712,6 +802,12 @@ macro_rules! def_widgets {
         }
 
         def_hyphen_notation!( $ty );
+    };
+}
+
+macro_rules! def_widgets {
+    ($($str:expr => $widget_type:ident $ty:ident $trait:ident $add_trait:ident $add:ident $widget_opt:ident;)+) => {$(
+        def_tuple_notation!( $str => $ty $trait opt::$widget_opt );
 
         use crate::$widget_type;
 
@@ -719,6 +815,16 @@ macro_rules! def_widgets {
             type Target = Widget<Inst>;
 
             fn deref( &self ) -> &Self::Target { &self.0 }
+        }
+
+        impl<Inst:TkInstance> UpcastFrom<Inst> for $widget_type<Inst> {
+            fn upcast_from( upcastable_widget: UpcastableWidget<Inst> ) -> Option<Self> {
+                if upcastable_widget.name == $str {
+                    Some( $widget_type( upcastable_widget.widget ))
+                } else {
+                    None
+                }
+            }
         }
 
         impl<Inst:TkInstance> From<$widget_type<Inst>> for Obj {
@@ -743,6 +849,34 @@ macro_rules! def_widgets {
             {
                 self.0.cget( <Opt as TkOption>::NAME )
             }
+
+            pub fn grab( &self ) -> InterpResult<()> {
+                self.0.tk().run(( "grab", self.0.path ))
+            }
+
+            pub fn grab_global( &self ) -> InterpResult<()> {
+                self.0.tk().run(( "grab", "-global", self.0.path ))
+            }
+
+            pub fn grab_set_current( &self ) -> InterpResult<()> {
+                self.0.tk().run(( "grab", "current", self.0.path ))
+            }
+
+            pub fn grab_release( &self ) -> InterpResult<()> {
+                self.0.tk().run(( "grab", "release", self.0.path ))
+            }
+
+            pub fn grab_set( &self ) -> InterpResult<()> {
+                self.0.tk().run(( "grab", "set", self.0.path ))
+            }
+
+            pub fn grab_set_global( &self ) -> InterpResult<()> {
+                self.0.tk().run(( "grab", "set", "-global", self.0.path ))
+            }
+
+            pub fn grab_status( &self ) -> InterpResult<()> {
+                self.0.tk().run(( "grab", "status", self.0.path ))
+            }
         }
 
         pub trait $add_trait {
@@ -760,42 +894,42 @@ macro_rules! def_widgets {
 }
 
 def_widgets! {
-    "button"        => TkButton       TkButtonTup       TkButtonFn        AddTkButton       add_button      TkButtonOpt       ;
-    "canvas"        => TkCanvas       TkCanvasTup       TkCanvasFn        AddTkCanvas       add_canvas      TkCanvasOpt       ;
-    "checkbutton"   => TkCheckbutton  TkCheckbuttonTup  TkCheckbuttonFn   AddTkCheckbutton  add_checkbutton TkCheckbuttonOpt  ;
-    "entry"         => TkEntry        TkEntryTup        TkEntryFn         AddTkEntry        add_entry       TkEntryOpt        ;
-    "frame"         => TkFrame        TkFrameTup        TkFrameFn         AddTkFrame        add_frame       TkFrameOpt        ;
-    "label"         => TkLabel        TkLabelTup        TkLabelFn         AddTkLabel        add_label       TkLabelOpt        ;
-    "labelframe"    => TkLabelframe   TkLabelframeTup   TkLabelframeFn    AddTkLabelframe   add_labelframe  TkLabelframeOpt   ;
-    "listbox"       => TkListbox      TkListboxTup      TkListboxFn       AddTkListbox      add_listbox     TkListboxOpt      ;
-    "menu"          => TkMenu         TkMenuTup         TkMenuFn          AddTkMenu         add_menu        TkMenuOpt         ;
-    "menubutton"    => TkMenubutton   TkMenubuttonTup   TkMenubuttonFn    AddTkMenubutton   add_menubutton  TkMenubuttonOpt   ;
-    "message"       => TkMessage      TkMessageTup      TkMessageFn       AddTkMessage      add_message     TkMessageOpt      ;
-    "panedwindow"   => TkPanedwindow  TkPanedwindowTup  TkPanedwindowFn   AddTkPanedwindow  add_panedwindow TkPanedwindowOpt  ;
-    "radiobutton"   => TkRadiobutton  TkRadiobuttonTup  TkRadiobuttonFn   AddTkRadiobutton  add_radiobutton TkRadiobuttonOpt  ;
-    "scale"         => TkScale        TkScaleTup        TkScaleFn         AddTkScale        add_scale       TkScaleOpt        ;
-    "scrollbar"     => TkScrollbar    TkScrollbarTup    TkScrollbarFn     AddTkScrollbar    add_scrollbar   TkScrollbarOpt    ;
-    "spinbox"       => TkSpinbox      TkSpinboxTup      TkSpinboxFn       AddTkSpinbox      add_spinbox     TkSpinboxOpt      ;
-    "text"          => TkText         TkTextTup         TkTextFn          AddTkText         add_text        TkTextOpt         ;
-    "toplevel"      => TkToplevel     TkToplevelTup     TkToplevelFn      AddTkToplevel     add_toplevel    TkToplevelOpt     ;
-    "ttk::entry"        => TtkEntry         TtkEntryTup         TtkEntryFn          AddTtkEntry         add_ttk_entry       TtkEntryOpt         ;
-    "ttk::frame"        => TtkFrame         TtkFrameTup         TtkFrameFn          AddTtkFrame         add_ttk_frame       TtkFrameOpt         ;
-    "ttk::label"        => TtkLabel         TtkLabelTup         TtkLabelFn          AddTtkLabel         add_ttk_label       TtkLabelOpt         ;
-    "ttk::button"       => TtkButton        TtkButtonTup        TtkButtonFn         AddTtkButton        add_ttk_button      TtkButtonOpt        ;
-    "ttk::checkbutton"  => TtkCheckbutton   TtkCheckbuttonTup   TtkCheckbuttonFn    AddTtkCheckbutton   add_ttk_checkbutton TtkCheckbuttonOpt   ;
-    "ttk::combobox"     => TtkCombobox      TtkComboboxTup      TtkComboboxFn       AddTtkCombobox      add_ttk_combobox    TtkComboboxOpt      ;
-    "ttk::labelframe"   => TtkLabelframe    TtkLabelframeTup    TtkLabelframeFn     AddTtkLabelframe    add_ttk_labelframe  TtkLabelframeOpt    ;
-    "ttk::menubutton"   => TtkMenubutton    TtkMenubuttonTup    TtkMenubuttonFn     AddTtkMenubutton    add_ttk_menubutton  TtkMenubuttonOpt    ;
-    "ttk::notebook"     => TtkNotebook      TtkNotebookTup      TtkNotebookFn       AddTtkNotebook      add_ttk_notebook    TtkNotebookOpt      ;
-    "ttk::panedwindow"  => TtkPanedwindow   TtkPanedwindowTup   TtkPanedwindowFn    AddTtkPanedwindow   add_ttk_panedwindow TtkPanedwindowOpt   ;
-    "ttk::progressbar"  => TtkProgressbar   TtkProgressbarTup   TtkProgressbarFn    AddTtkProgressbar   add_ttk_progressbar TtkProgressbarOpt   ;
-    "ttk::radiobutton"  => TtkRadiobutton   TtkRadiobuttonTup   TtkRadiobuttonFn    AddTtkRadiobutton   add_ttk_radiobutton TtkRadiobuttonOpt   ;
-    "ttk::scale"        => TtkScale         TtkScaleTup         TtkScaleFn          AddTtkScale         add_ttk_scale       TtkScaleOpt         ;
-    "ttk::scrollbar"    => TtkScrollbar     TtkScrollbarTup     TtkScrollbarFn      AddTtkScrollbar     add_ttk_scrollbar   TtkScrollbarOpt     ;
-    "ttk::separator"    => TtkSeparator     TtkSeparatorTup     TtkSeparatorFn      AddTtkSeparator     add_ttk_separator   TtkSeparatorOpt     ;
-    "ttk::sizegrip"     => TtkSizegrip      TtkSizegripTup      TtkSizegripFn       AddTtkSizegrip      add_ttk_sizegrip    TtkSizegripOpt      ;
-    "ttk::spinbox"      => TtkSpinbox       TtkSpinboxTup       TtkSpinboxFn        AddTtkSpinbox       add_ttk_spinbox     TtkSpinboxOpt       ;
-    "ttk::treeview"     => TtkTreeview      TtkTreeviewTup      TtkTreeviewFn       AddTtkTreeview      add_ttk_treeview    TtkTreeviewOpt      ;
+    "button"         => TkButton      TkButtonTup      TkButtonFn      AddTkButton      add_button      TkButtonOpt      ;
+    "canvas"         => TkCanvas      TkCanvasTup      TkCanvasFn      AddTkCanvas      add_canvas      TkCanvasOpt      ;
+    "checkbutton"    => TkCheckbutton TkCheckbuttonTup TkCheckbuttonFn AddTkCheckbutton add_checkbutton TkCheckbuttonOpt ;
+    "entry"          => TkEntry       TkEntryTup       TkEntryFn       AddTkEntry       add_entry       TkEntryOpt       ;
+    "frame"          => TkFrame       TkFrameTup       TkFrameFn       AddTkFrame       add_frame       TkFrameOpt       ;
+    "label"          => TkLabel       TkLabelTup       TkLabelFn       AddTkLabel       add_label       TkLabelOpt       ;
+    "labelframe"     => TkLabelframe  TkLabelframeTup  TkLabelframeFn  AddTkLabelframe  add_labelframe  TkLabelframeOpt  ;
+    "listbox"        => TkListbox     TkListboxTup     TkListboxFn     AddTkListbox     add_listbox     TkListboxOpt     ;
+    "menu"           => TkMenu        TkMenuTup        TkMenuFn        AddTkMenu        add_menu        TkMenuOpt        ;
+    "menubutton"     => TkMenubutton  TkMenubuttonTup  TkMenubuttonFn  AddTkMenubutton  add_menubutton  TkMenubuttonOpt  ;
+    "message"        => TkMessage     TkMessageTup     TkMessageFn     AddTkMessage     add_message     TkMessageOpt     ;
+    "panedwindow"    => TkPanedwindow TkPanedwindowTup TkPanedwindowFn AddTkPanedwindow add_panedwindow TkPanedwindowOpt ;
+    "radiobutton"    => TkRadiobutton TkRadiobuttonTup TkRadiobuttonFn AddTkRadiobutton add_radiobutton TkRadiobuttonOpt ;
+    "scale"          => TkScale       TkScaleTup       TkScaleFn       AddTkScale       add_scale       TkScaleOpt       ;
+    "scrollbar"      => TkScrollbar   TkScrollbarTup   TkScrollbarFn   AddTkScrollbar   add_scrollbar   TkScrollbarOpt   ;
+    "spinbox"        => TkSpinbox     TkSpinboxTup     TkSpinboxFn     AddTkSpinbox     add_spinbox     TkSpinboxOpt     ;
+    "text"           => TkText        TkTextTup        TkTextFn        AddTkText        add_text        TkTextOpt        ;
+    "toplevel"       => TkToplevel    TkToplevelTup    TkToplevelFn    AddTkToplevel    add_toplevel    TkToplevelOpt    ;
+    "ttk::entry"       => TtkEntry       TtkEntryTup       TtkEntryFn       AddTtkEntry       add_ttk_entry       TtkEntryOpt         ;
+    "ttk::frame"       => TtkFrame       TtkFrameTup       TtkFrameFn       AddTtkFrame       add_ttk_frame       TtkFrameOpt         ;
+    "ttk::label"       => TtkLabel       TtkLabelTup       TtkLabelFn       AddTtkLabel       add_ttk_label       TtkLabelOpt         ;
+    "ttk::button"      => TtkButton      TtkButtonTup      TtkButtonFn      AddTtkButton      add_ttk_button      TtkButtonOpt        ;
+    "ttk::checkbutton" => TtkCheckbutton TtkCheckbuttonTup TtkCheckbuttonFn AddTtkCheckbutton add_ttk_checkbutton TtkCheckbuttonOpt   ;
+    "ttk::combobox"    => TtkCombobox    TtkComboboxTup    TtkComboboxFn    AddTtkCombobox    add_ttk_combobox    TtkComboboxOpt      ;
+    "ttk::labelframe"  => TtkLabelframe  TtkLabelframeTup  TtkLabelframeFn  AddTtkLabelframe  add_ttk_labelframe  TtkLabelframeOpt    ;
+    "ttk::menubutton"  => TtkMenubutton  TtkMenubuttonTup  TtkMenubuttonFn  AddTtkMenubutton  add_ttk_menubutton  TtkMenubuttonOpt    ;
+    "ttk::notebook"    => TtkNotebook    TtkNotebookTup    TtkNotebookFn    AddTtkNotebook    add_ttk_notebook    TtkNotebookOpt      ;
+    "ttk::panedwindow" => TtkPanedwindow TtkPanedwindowTup TtkPanedwindowFn AddTtkPanedwindow add_ttk_panedwindow TtkPanedwindowOpt   ;
+    "ttk::progressbar" => TtkProgressbar TtkProgressbarTup TtkProgressbarFn AddTtkProgressbar add_ttk_progressbar TtkProgressbarOpt   ;
+    "ttk::radiobutton" => TtkRadiobutton TtkRadiobuttonTup TtkRadiobuttonFn AddTtkRadiobutton add_ttk_radiobutton TtkRadiobuttonOpt   ;
+    "ttk::scale"       => TtkScale       TtkScaleTup       TtkScaleFn       AddTtkScale       add_ttk_scale       TtkScaleOpt         ;
+    "ttk::scrollbar"   => TtkScrollbar   TtkScrollbarTup   TtkScrollbarFn   AddTtkScrollbar   add_ttk_scrollbar   TtkScrollbarOpt     ;
+    "ttk::separator"   => TtkSeparator   TtkSeparatorTup   TtkSeparatorFn   AddTtkSeparator   add_ttk_separator   TtkSeparatorOpt     ;
+    "ttk::sizegrip"    => TtkSizegrip    TtkSizegripTup    TtkSizegripFn    AddTtkSizegrip    add_ttk_sizegrip    TtkSizegripOpt      ;
+    "ttk::spinbox"     => TtkSpinbox     TtkSpinboxTup     TtkSpinboxFn     AddTtkSpinbox     add_ttk_spinbox     TtkSpinboxOpt       ;
+    "ttk::treeview"    => TtkTreeview    TtkTreeviewTup    TtkTreeviewFn    AddTtkTreeview    add_ttk_treeview    TtkTreeviewOpt      ;
 }
 
 macro_rules! def_geometry_managers {
@@ -971,7 +1105,6 @@ impl<Inst:TkInstance> Widget<Inst> {
         let slaves = self.tk().eval(( "place", "slaves", self.deref().path ))?;
         ret!( self.tk().widgets_from_obj( slaves ))
     }
-
 }
 
 pub(crate) fn append_opts<Opts>( command: &mut Vec<Obj>, opts: Opts )
@@ -987,6 +1120,10 @@ pub(crate) fn append_opts<Opts>( command: &mut Vec<Obj>, opts: Opts )
 
 pub fn path_seg( path: &'static str ) -> PathOptsWidgets<(),()> {
     PathOptsWidgets{ path, opts:(), widgets:() }
+}
+
+pub fn no_arg() -> PathOptsWidgets<(),()> {
+    PathOptsWidgets{ path:"", opts:(), widgets:() }
 }
 
 impl<Inst:TkInstance> Tk<Inst> {
@@ -1162,7 +1299,7 @@ impl<Inst:TkInstance> Tk<Inst> {
         self.eval( command ).map( |obj| obj.to_string() )
     }
 
-    pub fn choose_directory<Opts>( &self, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<String>
+    pub fn choose_directory<Opts>( &self, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<PathBuf>
         where Opts : IntoHomoTuple<opt::TkChooseDirectoryOpt>
                    + IntoHomoTuple<OptPair>
     {
@@ -1170,7 +1307,7 @@ impl<Inst:TkInstance> Tk<Inst> {
         command.push( "tk_chooseDirectory".into() );
 
         append_opts( &mut command, opts.into().opts );
-        self.eval( command ).map( |obj| obj.to_string() )
+        self.eval( command ).map( |obj| obj.to_string().into() )
     }
 
     pub fn focus_next( &self, widget: Widget<Inst> ) -> InterpResult<Widget<Inst>> {
@@ -1262,11 +1399,11 @@ impl<Inst:TkInstance> Tk<Inst> {
         self.run(( "tkwait", "variable", name ))
     }
 
-    pub fn wait_visibility( &self, widget: Widget<Inst> ) -> InterpResult<()> {
+    pub fn wait_visibility( &self, widget: &Widget<Inst> ) -> InterpResult<()> {
         self.run(( "tkwait", "visibility", widget.path ))
     }
 
-    pub fn wait_window( &self, widget: Widget<Inst> ) -> InterpResult<()> {
+    pub fn wait_window( &self, widget: &Widget<Inst> ) -> InterpResult<()> {
         self.run(( "tkwait", "window", widget.path ))
     }
 
@@ -1304,6 +1441,11 @@ impl<Inst:TkInstance> Tk<Inst> {
             , <Widgets as IntoHomoTuple<Obj>>::Output : Into<Obj>
     {
         self.run(( "eval", "destroy", widgets.into_homo_tuple() ))
+    }
+
+    pub fn grab_current( &self ) -> InterpResult<Widget<Inst>> {
+        let path = self.eval(( "grab", "current" ))?.to_string();
+        Ok( Widget{ path: Tk::<Inst>::make_or_get_path( &path ), inst: self.inst, mark: NOT_SEND_SYNC })
     }
 }
 

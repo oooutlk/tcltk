@@ -183,10 +183,13 @@ surprisingly, if you want to add a submenu to an existing menu, you also use a
 let menu_recent = menu_file.add_menu(())?;
 menu_file.add_cascade( -menu(menu_recent) -label("Open Recent") )?;
 for f in recent_files {
-    menu_recent.add_command(
-        -label( format!("file tail {}",f) )
-        -command( format!("openFile {}",f) )
-    )?;
+    let f = PathBuf::from(f);
+    if let Some( file_name ) = f.file_name() {
+        menu_recent.add_command(
+            -label( file_name.to_str() )
+            -command(( "openFile", f ))
+        )?;
+    }
 }
 ```
 
@@ -406,6 +409,31 @@ Tk predefines the following virtual events:
 
 For additional information, see the `event` mod.
 
+## Construct all menus in one statement
+
+The tk crate provides `add_menus()`, a convenient API to construct all menus in
+one place:
+
+```rust,no_run
+let win = root.add_toplevel(())?;
+let created_widgets = win.add_menus( "menubar"
+    -menu::cascade( "file" -label("File")
+        -menu::command( -label("New")       -command("newFile") )
+        -menu::command( -label("Open...")   -command("openFile") )
+        -menu::command( -label("Close")     -command("closeFile") )
+        -menu::cascade( "recent" -label("Open Recent") )
+        -menu::separator( no_arg() )
+        -menu::checkbutton( -label("Check") -variable("check") -onvalue(1) -offvalue(0) )
+        -menu::radiobutton( -label("One")   -variable("radio") -value(1) )
+        -menu::radiobutton( -label("Two")   -variable("radio") -value(2) )
+    )
+)?;
+```
+
+See `add_menus` example for more.
+
 ## Run Example
 
 `cargo run --example menu`
+
+`cargo run --example add_menus`

@@ -177,10 +177,12 @@ pub use error::{
     TkResult,
 };
 
+#[macro_use]
 pub mod cmd;
 pub use cmd::{
     TkRoot,
     Widget,
+    no_arg,
     path_seg,
 };
 pub(crate) use cmd::{
@@ -200,6 +202,9 @@ mod option;
 
 pub mod photo;
 pub use photo::Photo;
+
+pub mod query;
+pub use query::{UpcastFrom, UpcastableWidget, CreatedWidgets};
 
 mod raise;
 
@@ -294,6 +299,7 @@ pub use listbox::{
 
 pub mod menu;
 pub use menu::{
+    AddMenus,
     Index as TkMenuIndex,
     TkMenu,
     TkMenuCloneType,

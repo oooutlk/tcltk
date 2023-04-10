@@ -1,3 +1,6 @@
+// cargo run --example menu
+
+use std::path::PathBuf;
 use tcl::*;
 use tk::*;
 use tk::cmd::*;
@@ -23,12 +26,19 @@ fn main() -> TkResult<()> {
 
     let menu_recent = menu_file.add_menu(())?;
     menu_file.add_cascade( -menu(menu_recent) -label("Open Recent") )?;
-    let recent_files : [&str;0] = [];
+    let recent_files = [
+        "/some/place/lorum.txt",
+        "/another/place/ipsum.md",
+        "/yet_another/place/dolor.toml",
+    ];
     for f in recent_files {
-        menu_recent.add_command(
-            -label( format!("file tail {}",f) )
-            -command( format!("openFile {}",f) )
-        )?;
+        let f = PathBuf::from(f);
+        if let Some( file_name ) = f.file_name() {
+            menu_recent.add_command(
+                -label( file_name.to_str() )
+                -command(( "openFile", f ))
+            )?;
+        }
     }
 
     menu_file.add_separator(())?;
@@ -37,7 +47,7 @@ fn main() -> TkResult<()> {
     menu_file.add_radiobutton( -label("One")   -variable("radio") -value(1) )?;
     menu_file.add_radiobutton( -label("Two")   -variable("radio") -value(2) )?;
 
-    menu_recent.delete_range( 0.. )?;
+    //menu_recent.delete_range( 0.. )?;
 
     println!( "{}", menu_file.entrycget( 0, label )? ); // get label of top entry in menu
     println!( "{}", menu_file.entryconfigure_options(0)? ); // show all options for an item

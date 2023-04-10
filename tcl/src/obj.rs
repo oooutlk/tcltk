@@ -57,6 +57,7 @@ use std::{
     mem,
     ops::Range,
     os::raw::{c_char, c_double, c_int, c_long, c_longlong, c_void},
+    path::PathBuf,
     ptr::{NonNull, null_mut},
     slice,
 };
@@ -473,6 +474,12 @@ impl<'a,B> From<Cow<'a,B>> for Obj
             Cow::Borrowed( borrowed ) => borrowed.into(),
             Cow::Owned( owned ) => owned.into(),
         }
+    }
+}
+
+impl From<PathBuf> for Obj {
+    fn from( s: PathBuf ) -> Obj {
+        s.display().to_string().into()
     }
 }
 
