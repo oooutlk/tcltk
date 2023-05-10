@@ -8,6 +8,8 @@ use crate::{
     TkBBox,
     TkInstance,
     TkOption,
+    TkXView,
+    TkYView,
     TtkCommonTraits,
     TtkTreeviewRegion,
     Widget,
@@ -105,19 +107,19 @@ impl From<Index> for Obj {
     }
 }
 
-pub enum TtkTreeviewColumnId<'a> {
-    Name( &'a str ),
+pub enum Column {
+    Name( &'static str ),
     Nth( c_int ),
     NthDisplay( c_int ),
 }
 
-impl<'a> From<&'a str> for TtkTreeviewColumnId<'a> {
-    fn from( name: &'a str ) -> Self { TtkTreeviewColumnId::Name( name )}
+impl From<&'static str> for Column {
+    fn from( name: &'static str ) -> Self { Column::Name( name )}
 }
 
-impl<'a> From<TtkTreeviewColumnId<'a>> for Obj {
-    fn from( id: TtkTreeviewColumnId ) -> Obj {
-        use TtkTreeviewColumnId::*;
+impl From<Column> for Obj {
+    fn from( id: Column ) -> Obj {
+        use Column::*;
         match id {
             Name(       n ) => n.into(),
             Nth(        n ) => n.into(),
@@ -139,8 +141,8 @@ impl<TK:TkInstance> TtkTreeview<TK> {
     }
 
     #[cex]
-    pub fn bbox_of_column( &self, item: &str, column: &str ) -> Result!( Option<TkBBox> throws DeError, InterpError ) {
-        let obj = self.tk().eval(( self.path, "bbox", item, column ))?;
+    pub fn bbox_of_column( &self, item: &str, column: impl Into<Column> ) -> Result!( Option<TkBBox> throws DeError, InterpError ) {
+        let obj = self.tk().eval(( self.path, "bbox", item, column.into() ))?;
         if obj.is_empty() {
             Ok( None )
         } else {
@@ -149,18 +151,8 @@ impl<TK:TkInstance> TtkTreeview<TK> {
         }
     }
 
-    pub fn set_children( &self, item: &str, new_children: &[&str] ) -> InterpResult<()> {
-        let mut command = Vec::<Obj>::with_capacity( new_children.len() + 3 );
-
-        command.push( self.path.into() );
-        command.push( "children".into() );
-        command.push( item.into() );
-
-        for &child in new_children {
-            command.push( child.into() );
-        }
-
-        self.tk().run( command )
+    pub fn set_children( &self, item: &str, new_children: Vec<String> ) -> InterpResult<()> {
+        self.tk().run(( self.path, "children", item, new_children ))
     }
 
     #[cex]
@@ -171,50 +163,32 @@ impl<TK:TkInstance> TtkTreeview<TK> {
                 .collect::<Vec<_>>() )
     }
 
-    pub fn column_cget<Opt>( &self, column: &str, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
+    pub fn column<Opt>( &self, column: impl Into<Column>, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
         where Opt : TkOption
                   + Into<TtkTreeviewColumnOpt>
     {
-        self.tk().eval(( self.path, "column", column, <Opt as TkOption>::NAME ))
+        self.tk().eval(( self.path, "column", column.into(), <Opt as TkOption>::NAME ))
     }
 
-    pub fn column_configure<Opts>( &self, column: &str, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Obj>
+    pub fn set_column<Opts>( &self, column: impl Into<Column>, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Obj>
         where Opts : IntoHomoTuple<TtkTreeviewColumnOpt>
                    + IntoHomoTuple<OptPair>
     {
         let mut command = Vec::<Obj>::with_capacity( <<Opts as IntoHomoTuple<OptPair>>::Output as tuplex::Len>::LEN * 2 + 3 );
         command.push( self.path.into() );
         command.push( "column".into() );
-        command.push( column.into() );
+        command.push( Obj::from( column.into() ));
 
         append_opts( &mut command, opts.into().opts );
         self.tk().eval( command )
     }
 
-    pub fn delete( &self, item_list: &[&str] ) -> InterpResult<()> {
-        let mut command = Vec::<Obj>::with_capacity( item_list.len() + 2 );
-
-        command.push( self.path.into() );
-        command.push( "delete".into() );
-
-        for &item in item_list {
-            command.push( item.into() );
-        }
-
-        self.tk().run( command )
+    pub fn delete( &self, item_list: Vec<String> ) -> InterpResult<()> {
+        self.tk().run(( self.path, "delete", item_list ))
     }
 
-    pub fn detach( &self, item_list: &[&str] ) -> InterpResult<()> {
-        let mut command = Vec::<Obj>::with_capacity( item_list.len() + 2 );
-
-        command.push( self.path.into() );
-        command.push( "detach".into() );
-
-        for &item in item_list {
-            command.push( item.into() );
-        }
-
-        self.tk().run( command )
+    pub fn detach( &self, item_list: Vec<String> ) -> InterpResult<()> {
+        self.tk().run(( self.path, "detach", item_list ))
     }
 
     pub fn exists( &self, item: &str ) -> InterpResult<bool> {
@@ -235,21 +209,21 @@ impl<TK:TkInstance> TtkTreeview<TK> {
         }
     }
 
-    pub fn heading_cget<Opt>( &self, column: &str, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
+    pub fn heading<Opt>( &self, column: impl Into<Column>, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
         where Opt : TkOption
                   + Into<TtkTreeviewHeadingOpt>
     {
-        self.tk().eval(( self.path, "heading", column, <Opt as TkOption>::NAME ))
+        self.tk().eval(( self.path, "heading", column.into(), <Opt as TkOption>::NAME ))
     }
 
-    pub fn heading_configure<Opts>( &self, column: &str, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Obj>
+    pub fn set_heading<Opts>( &self, column: impl Into<Column>, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Obj>
         where Opts : IntoHomoTuple<TtkTreeviewHeadingOpt>
                    + IntoHomoTuple<OptPair>
     {
         let mut command = Vec::<Obj>::with_capacity( <<Opts as IntoHomoTuple<OptPair>>::Output as tuplex::Len>::LEN * 2 + 3 );
         command.push( self.path.into() );
         command.push( "heading".into() );
-        command.push( column.into() );
+        command.push( Obj::from( column.into() ));
 
         append_opts( &mut command, opts.into().opts );
         self.tk().eval( command )
@@ -309,21 +283,21 @@ impl<TK:TkInstance> TtkTreeview<TK> {
         }
     }
 
-    pub fn item_cget<Opt>( &self, column: &str, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
+    pub fn item<Opt>( &self, column: impl Into<Column>, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
         where Opt : TkOption
                   + Into<TtkTreeviewItemOpt>
     {
-        self.tk().eval(( self.path, "item", column, <Opt as TkOption>::NAME ))
+        self.tk().eval(( self.path, "item", column.into(), <Opt as TkOption>::NAME ))
     }
 
-    pub fn item_configure<Opts>( &self, column: &str, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Obj>
+    pub fn set_item<Opts>( &self, column: impl Into<Column>, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Obj>
         where Opts : IntoHomoTuple<TtkTreeviewItemOpt>
                    + IntoHomoTuple<OptPair>
     {
         let mut command = Vec::<Obj>::with_capacity( <<Opts as IntoHomoTuple<OptPair>>::Output as tuplex::Len>::LEN * 2 + 3 );
         command.push( self.path.into() );
         command.push( "item".into() );
-        command.push( column.into() );
+        command.push( Obj::from( column.into() ));
 
         append_opts( &mut command, opts.into().opts );
         self.tk().eval( command )
@@ -364,43 +338,33 @@ impl<TK:TkInstance> TtkTreeview<TK> {
         self.tk().run(( self.path, "see", item ))
     }
 
-    fn selection( &self, sub_cmd: &'static str, item_list: &[&str] ) -> InterpResult<()> {
-        let mut command = Vec::<Obj>::with_capacity( item_list.len() + 3 );
-
-        command.push( self.path.into() );
-        command.push( "selection".into() );
-        command.push( sub_cmd.into() );
-
-        for &item in item_list {
-            command.push( item.into() );
-        }
-
-        self.tk().run( command )
+    fn selection( &self, sub_cmd: &'static str, item_list: Vec<String> ) -> InterpResult<()> {
+        self.tk().run(( self.path, "selection", sub_cmd, item_list ))
     }
 
-    pub fn selection_add( &self, item_list: &[&str] ) -> InterpResult<()> {
+    pub fn selection_add( &self, item_list: Vec<String> ) -> InterpResult<()> {
         self.selection( "add", item_list )
     }
 
-    pub fn selection_set( &self, item_list: &[&str] ) -> InterpResult<()> {
+    pub fn selection_set( &self, item_list: Vec<String> ) -> InterpResult<()> {
         self.selection( "set", item_list )
     }
 
-    pub fn selection_remove( &self, item_list: &[&str] ) -> InterpResult<()> {
+    pub fn selection_remove( &self, item_list: Vec<String> ) -> InterpResult<()> {
         self.selection( "remove", item_list )
     }
 
-    pub fn selection_toggle( &self, item_list: &[&str] ) -> InterpResult<()> {
+    pub fn selection_toggle( &self, item_list: Vec<String> ) -> InterpResult<()> {
         self.selection( "toggle", item_list )
     }
 
-    pub fn set_item_at_column<'a>( &self, item: &str, column: impl Into<TtkTreeviewColumnId<'a>>, value: impl Into<Obj> )
+    pub fn set_item_at_column( &self, item: &str, column: impl Into<Column>, value: impl Into<Obj> )
         -> InterpResult<()>
     {
         self.tk().run(( self.path, "set", item, column.into(), value ))
     }
 
-    pub fn item_at_column<'a>( &self, item: &str, column: impl Into<TtkTreeviewColumnId<'a>> ) -> InterpResult<Obj> {
+    pub fn item_at_column( &self, item: &str, column: impl Into<Column> ) -> InterpResult<Obj> {
         self.tk().eval(( self.path, "set", item, column.into() ))
     }
 
@@ -429,7 +393,7 @@ impl<TK:TkInstance> TtkTreeview<TK> {
         self.tk().run(( self.path, "tag", "bind", tag_name, sequence.into(), script.into() ))
     }
 
-    pub fn tag_cget<Opt>( &self, tag: &str, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
+    pub fn tag<Opt>( &self, tag: &str, _name_fn: fn(Obj)->Opt ) -> InterpResult<Obj>
         where Opt : TkOption
                   + Into<TtkTreeviewTagOpt>
     {
@@ -497,3 +461,11 @@ impl<TK:TkInstance> TtkTreeview<TK> {
 }
 
 impl<TK:TkInstance> TtkCommonTraits<TK> for TtkTreeview<TK> {}
+
+impl<TK:TkInstance> TkXView<TK> for TtkTreeview<TK> {
+    type Index = Index;
+}
+
+impl<TK:TkInstance> TkYView<TK> for TtkTreeview<TK> {
+    type Index = Index;
+}

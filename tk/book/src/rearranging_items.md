@@ -29,8 +29,8 @@ We can control whether or not the item is open and shows its children by
 modifying the `open` item configuration option.
 
 ```rust,no_run
-tree.item_configure( "widgets", -open("true") )?;
-let is_open = tree.item_cget( "widgets", open )?;
+tree.set_item( "widgets", -open("true") )?;
+let is_open = tree.item( "widgets", open )?;
 ```
 
 ## Run Example

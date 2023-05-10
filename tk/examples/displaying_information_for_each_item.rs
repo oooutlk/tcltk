@@ -12,8 +12,8 @@ fn main() -> TkResult<()> {
     tree.configure( -columns("size modified owner") )?;
     tree.insert( "", Index::End, "widgets" -text("Widget Tour") )?;
 
-    tree.column_configure( "size", -width(100) -anchor("center") )?;
-    tree.heading_configure( "size", -text("Size") )?;
+    tree.set_column( "size", -width(100) -anchor("center") )?;
+    tree.set_heading( "size", -text("Size") )?;
 
     tree.set_item_at_column( "widgets", "size", "12KB" )?;
     let size = tree.item_at_column( "widgets", "size" )?;

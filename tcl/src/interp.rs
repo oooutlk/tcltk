@@ -334,6 +334,66 @@ impl Interp {
             clib::Tcl_ObjSetVar2( self.0.as_ptr(), arr.as_ptr(), elem.as_ptr(), rhs.as_ptr(), flags ))}
     }
 
+    /// This command removes one variable named `var_name`. If a name refers to an
+    /// element of an array then that element is removed without affecting the rest of
+    /// the array. If a name consists of an array name with no parenthesized index, then
+    /// the entire array is deleted. An error can occur when the named variable does not
+    /// exist, or the name refers to an array element but the variable is a scalar, or
+    /// the name refers to a variable in a non-existent namespace.
+    pub fn unset( &self, var_name: &str ) -> Result<()> {
+        let flags = ( clib::TCL_LEAVE_ERR_MSG ) as c_int;
+        if let Ok( var_name ) = CString::new( var_name ) {
+            unsafe {
+                clib::Tcl_UnsetVar( self.0.as_ptr(), var_name.as_ptr(), flags )
+                    .code_to_result( self )
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    /// This command removes one variable named `var_name`. If a name refers to an
+    /// element of an array then that element is removed without affecting the rest of
+    /// the array. If a name consists of an array name with no parenthesized index, then
+    /// the entire array is deleted.
+    pub fn unset_nocomplain( &self, var_name: &str ) {
+        let flags: c_int = 0;
+        if let Ok( var_name ) = CString::new( var_name ) {
+            unsafe {
+                clib::Tcl_UnsetVar( self.0.as_ptr(), var_name.as_ptr(), flags );
+            }
+        }
+    }
+
+    /// This command removes an element named `elem_name` of an array named `arr_name`.
+    /// An error can occur when the element does not exist, or the name refers to an
+    /// array element but the variable is a scalar, or the name refers to the array in a
+    /// non-existent namespace.
+    pub fn arr_unset( &self, arr_name: &str, elem_name: &str ) -> Result<()> {
+        let flags = ( clib::TCL_LEAVE_ERR_MSG ) as c_int;
+        if let Ok( arr_name ) = CString::new( arr_name ) {
+            if let Ok( elem_name ) = CString::new( elem_name ) {
+                return unsafe {
+                    clib::Tcl_UnsetVar2( self.0.as_ptr(), arr_name.as_ptr(), elem_name.as_ptr(), flags )
+                        .code_to_result( self )
+                };
+            }
+        }
+        Ok(())
+    }
+
+    /// This command removes an element named `elem_name` of an array named `arr_name`.
+    pub fn arr_unset_nocomplain( &self, arr_name: &str, elem_name: &str ) {
+        let flags: c_int = 0;
+        if let Ok( arr_name ) = CString::new( arr_name ) {
+            if let Ok( elem_name ) = CString::new( elem_name ) {
+                unsafe {
+                    clib::Tcl_UnsetVar2( self.0.as_ptr(), arr_name.as_ptr(), elem_name.as_ptr(), flags );
+                }
+            }
+        }
+    }
+
     /// Converts `val` into a boolean value.
     ///
     /// # Examples

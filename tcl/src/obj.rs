@@ -477,6 +477,12 @@ impl<'a,B> From<Cow<'a,B>> for Obj
     }
 }
 
+impl From<Obj> for PathBuf {
+    fn from( obj: Obj ) -> Self {
+        PathBuf::from( obj.to_string() )
+    }
+}
+
 impl From<PathBuf> for Obj {
     fn from( s: PathBuf ) -> Obj {
         s.display().to_string().into()

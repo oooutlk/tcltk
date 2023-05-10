@@ -269,6 +269,23 @@ pub type Tcl_ObjCmdProc = ::std::option::Option<
         objv: *const *mut Tcl_Obj,
     ) -> ::std::os::raw::c_int,
 >;
+pub fn Tcl_UnsetVar(
+    interp: *mut Tcl_Interp,
+    varName: *const ::std::os::raw::c_char,
+    flags: ::std::os::raw::c_int,
+) -> ::std::os::raw::c_int {t!();}
+pub fn Tcl_UnsetVar2(
+    interp: *mut Tcl_Interp,
+    part1: *const ::std::os::raw::c_char,
+    part2: *const ::std::os::raw::c_char,
+    flags: ::std::os::raw::c_int,
+) -> ::std::os::raw::c_int {t!();}
 pub type Tcl_UpdateStringProc = ::std::option::Option<unsafe extern "C" fn(objPtr: *mut Tcl_Obj)>;
 pub type Tcl_WideInt = ::std::os::raw::c_longlong;
+pub fn Tcl_WrongNumArgs(
+    interp: *mut Tcl_Interp,
+    objc: ::std::os::raw::c_int,
+    objv: *const *mut Tcl_Obj,
+    message: *const ::std::os::raw::c_char,
+) {t!();}
 pub fn TclFreeObj(objPtr: *mut Tcl_Obj) {t!();}

@@ -161,7 +161,7 @@ def_opts! {
     TkDisabledOutlineStipple    TkDisabledOutlineStippleFn      "-disabledoutlinestipple"       ;
     TkDisabledStipple           TkDisabledStippleFn             "-disabledstipple"              ;
     TkDisabledWidth             TkDisabledWidthFn               "-disabledwidth"                ;
-    TkDisplayColumns            TkDisplayColumnsFn              "displaycolumns"                ;
+    TkDisplayColumns            TkDisplayColumnsFn              "-displaycolumns"               ;
     TkElementBorderWidth        TkElementBorderWidthFn          "-elementborderwidth"           ;
     TkElide                     TkElideFn                       "-elide"                        ;
     TkEndline                   TkEndlineFn                     "-endline"                      ;

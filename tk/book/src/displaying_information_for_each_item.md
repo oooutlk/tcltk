@@ -18,8 +18,8 @@ column's heading, such as the text to display, an optional image, alignment, and
 a script to invoke when the item is clicked (e.g., to sort the tree).
 
 ```rust,no_run
-tree.column_configure( "size", -width(100) -anchor("center") )?;
-tree.heading_configure( "size", -text("Size") )?;
+tree.set_column( "size", -width(100) -anchor("center") )?;
+tree.set_heading( "size", -text("Size") )?;
 ```
 
 What to display in each column for each item can be specified individually by

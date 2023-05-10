@@ -243,7 +243,7 @@ pub use range::{
 };
 
 pub mod traits;
-pub use traits::{Delete, TkBBoxTrait, TkEntryTraits, TkXView};
+pub use traits::{Delete, TkBBoxTrait, TkEntryTraits, TkXView, TkYView};
 
 pub mod types;
 pub use types::{
@@ -401,11 +401,14 @@ pub mod ttk_treeview;
 pub use ttk_treeview::{
     Index as TtkTreeviewIndex,
     TtkTreeview,
-    TtkTreeviewColumnId,
+    Column as TtkTreeviewColumn,
 };
 
 pub mod font;
 pub use font::Font;
+
+pub mod ext;
+pub use ext::{AddHBox, AddVBox, HBox, HBoxResize, VBox, VBoxResize};
 
 const TEST_MAIN_WINDOW: &'static str = "winfo exists .\0";
 

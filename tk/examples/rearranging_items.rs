@@ -30,8 +30,8 @@ fn main() -> TkResult<()> {
     
     //tree.delete( &[ "widgets" ])?;
     
-    tree.item_configure( "widgets", -open("true") )?;
-    let is_open = tree.item_cget( "widgets", open )?;
+    tree.set_item( "widgets", -open("true") )?;
+    let is_open = tree.item( "widgets", open )?;
     println!( "is_open:{}", is_open );
 
     Ok( main_loop() )

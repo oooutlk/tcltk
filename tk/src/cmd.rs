@@ -59,24 +59,24 @@ pub(crate) const WIDGET_NAMES : [&'static str; 36] = [
     "spinbox",
     "text",
     "toplevel",
-    "ttk_button",
-    "ttk_checkbutton",
-    "ttk_combobox",
-    "ttk_entry",
-    "ttk_frame",
-    "ttk_label",
-    "ttk_labelframe",
-    "ttk_menubutton",
-    "ttk_notebook",
-    "ttk_panedwindow",
-    "ttk_progressbar",
-    "ttk_radiobutton",
-    "ttk_scale",
-    "ttk_scrollbar",
-    "ttk_separator",
-    "ttk_sizegrip",
-    "ttk_spinbox",
-    "ttk_treeview",
+    "ttk::button",
+    "ttk::checkbutton",
+    "ttk::combobox",
+    "ttk::entry",
+    "ttk::frame",
+    "ttk::label",
+    "ttk::labelframe",
+    "ttk::menubutton",
+    "ttk::notebook",
+    "ttk::panedwindow",
+    "ttk::progressbar",
+    "ttk::radiobutton",
+    "ttk::scale",
+    "ttk::scrollbar",
+    "ttk::separator",
+    "ttk::sizegrip",
+    "ttk::spinbox",
+    "ttk::treeview",
 ];
 
 pub(crate) fn find_widget_name( name: &str ) -> Option<&'static str> {
@@ -196,11 +196,13 @@ impl<Inst:TkInstance> Widget<Inst> {
 
         let widgets = path_widgets.widgets.convert_tuple();
 
-        let mut widget_query = CreatedWidgets::new( self.path );
+        let mut created_widgets = CreatedWidgets::new( self.path );
+        let mut is_branch = false;
 
         DomForest::<(&'static str,&'static str),OptPair,Shape>::try_preorder( widgets, &mut |visit| -> InterpResult<()> {
             match visit {
                 Visit::Branch( (cmd, path) ) => {
+                    is_branch = true;
                     is_geometry_manager = match cmd {
                         "pack" | "grid" | "place" => true,
                         _ => false,
@@ -218,14 +220,15 @@ impl<Inst:TkInstance> Widget<Inst> {
                     }
                 },
                 Visit::Leaf( (cmd, path) ) => {
-                    let next_path = self.tk().next_path( &current_path, path );
+                    is_branch = false;
+                    current_path = self.tk().next_path( &current_path, path );
                     geometry_stack.last_mut().map( |last| {
                         if last.depth == 0 {
-                            last.slaves.push( next_path.as_str().into() );
+                            last.slaves.push( current_path.as_str().into() );
                         }
                     });
                     command.push( cmd.into() );
-                    command.push( next_path.into() );
+                    command.push( current_path.as_str().into() );
                 },
                 Visit::Frame => {
                     let mut is_geometry_manager = false;
@@ -266,10 +269,14 @@ impl<Inst:TkInstance> Widget<Inst> {
                         let widget_name = current_command[0].to_string();
                         self.tk().run( current_command )?;
                         if let Some( name ) = find_widget_name( &widget_name ) {
-                            widget_query.widgets.push( UpcastableWidget {
+                            created_widgets.widgets.push( UpcastableWidget {
                                 widget : Widget::from_name_unchecked( &current_path, self.tk().inst ),
                                 name   ,
                             });
+                        }
+                        if !is_branch {
+                            // No `Visit::Frame` for `Visit::Leaf`
+                            current_path = Widget::<Inst>::compute_parent_path( &current_path );
                         }
                     }
                 },
@@ -277,7 +284,7 @@ impl<Inst:TkInstance> Widget<Inst> {
             Ok(())
         })?;
 
-        Ok( widget_query )
+        Ok( created_widgets )
     }
 
     pub(crate) fn compute_parent_path( path: &str ) -> String {
