@@ -31,7 +31,11 @@ impl<Inst:TkInstance> CreatedWidgets<Inst> {
         } else {
             format!( "{}.{}", self.base_path, relative_path )
         };
-        self.widgets.iter().find( |&w| w.widget.path == path ).copied()
+
+        self.widgets
+            .iter()
+            .find( |&w| w.widget.path == path )
+            .copied()
     }
 
     pub fn query<Widg:UpcastFrom<Inst>>( &self, relative_path: &str ) -> Option<Widg> {

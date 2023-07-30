@@ -151,8 +151,8 @@ impl TkModifier {
     pub fn unmap            ( mut self ) -> TkEvent { self.0.push_str( "-Unmap>"            ); TkEvent( self.0 )}
     pub fn visibility       ( mut self ) -> TkEvent { self.0.push_str( "-Visibility>"       ); TkEvent( self.0 )}
 
-    pub fn key_press  ( mut self, key: impl Into<TkKey> ) -> TkEvent { self.0.push_str( &format!( "<KeyPress-{}>"  , key.into().to_string() )); TkEvent( self.0 )}
-    pub fn key_release( mut self, key: impl Into<TkKey> ) -> TkEvent { self.0.push_str( &format!( "<KeyRelease-{}>", key.into().to_string() )); TkEvent( self.0 )}
+    pub fn key_press  ( mut self, key: impl Into<TkKey> ) -> TkEvent { self.0.push_str( &format!( "-KeyPress-{}>"  , key.into().to_string() )); TkEvent( self.0 )}
+    pub fn key_release( mut self, key: impl Into<TkKey> ) -> TkEvent { self.0.push_str( &format!( "-KeyRelease-{}>", key.into().to_string() )); TkEvent( self.0 )}
 }
 
 impl TkEvent {

@@ -283,7 +283,6 @@ impl<Inst:TkInstance> Widget<Inst> {
             }
             Ok(())
         })?;
-
         Ok( created_widgets )
     }
 
