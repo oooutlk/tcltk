@@ -573,14 +573,16 @@ impl Interp {
 
     /// This is equivalent to calling "package provide" with the specified package name and
     /// version.
-    pub unsafe fn package_provide(&self, name: &str, version: &str) -> c_int {
+    pub fn package_provide(&self, name: &str, version: &str) -> c_int {
         let name = CString::new(name).expect("Tcl package name should be CString.");
         let version = CString::new(version).expect("Tcl package version should be CString.");
-        clib::Tcl_PkgProvide(
-            self.as_ptr(),
-            name.as_c_str().as_ptr(),
-            version.as_c_str().as_ptr(),
-        )
+        unsafe {
+            clib::Tcl_PkgProvide(
+                self.as_ptr(),
+                name.as_c_str().as_ptr(),
+                version.as_c_str().as_ptr(),
+            )
+        }
     }
 
     /// This command takes the contents of the specified file or resource and passes it
@@ -707,12 +709,7 @@ mod tests {
     #[test]
     fn package_provide() {
         let interp = Interpreter::new().unwrap();
-        unsafe {
-            assert_eq!(
-                interp.package_provide("mypackage", "1.2.3"),
-                i32::try_from(clib::TCL_OK).unwrap()
-            );
-        }
+        interp.package_provide("mypackage", "1.2.3");
         assert_eq!(
             interp
                 .eval("package require mypackage")
