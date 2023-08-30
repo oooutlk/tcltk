@@ -571,6 +571,20 @@ impl Interp {
         self.eval(( "package", "require", name ))
     }
 
+    /// This is equivalent to calling "package provide" with the specified package name and
+    /// version.
+    pub fn package_provide(&self, name: &str, version: &str) -> c_int {
+        let name = CString::new(name).expect("Tcl package name should be CString.");
+        let version = CString::new(version).expect("Tcl package version should be CString.");
+        unsafe {
+            clib::Tcl_PkgProvide(
+                self.as_ptr(),
+                name.as_c_str().as_ptr(),
+                version.as_c_str().as_ptr(),
+            )
+        }
+    }
+
     /// This command takes the contents of the specified file or resource and passes it
     /// to the Tcl interpreter as a text script. The return value from source is the
     /// return value of the last command executed in the script. If an error occurs in
@@ -690,5 +704,18 @@ mod tests {
         if let Err( err ) = interp.eval(( "badcommand", "or filename" )) {
             println!( "err:{:?}", err );
         }
+    }
+
+    #[test]
+    fn package_provide() {
+        let interp = Interpreter::new().unwrap();
+        interp.package_provide("mypackage", "1.2.3");
+        assert_eq!(
+            interp
+                .eval("package require mypackage")
+                .unwrap()
+                .get_string(),
+            "1.2.3".to_string()
+        );
     }
 }
