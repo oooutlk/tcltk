@@ -718,4 +718,47 @@ mod tests {
             "1.2.3".to_string()
         );
     }
+
+    #[test]
+    fn default_arguments() {
+        use crate::{tclfn, tclosure};
+        use crate as tcl;
+
+        let interp = Interpreter::new().unwrap();
+
+        tclfn!( interp,
+            fn fyz( _x: i32, #[default(42)] _y: i32, #[default(233)] _z: i32 ) -> TclResult<()> { Ok(()) }
+        );
+        tclfn!( interp,
+            fn fxz( #[default(42)] _x: i32, _y: i32, #[default(233)] _z: i32 ) -> TclResult<()> { Ok(()) }
+        );
+        tclosure!( interp, cmd: "cyz",
+            |_x: i32, #[default(42)] _y: i32, #[default(233)] _z: i32| -> TclResult<()> { Ok(()) });
+        tclosure!( interp, cmd: "cxz",
+            |#[default(42)] _x: i32, _y: i32, #[default(233)] _z: i32| -> TclResult<()> { Ok(()) });
+
+        assert!( interp.run( "fyz 1 2 3 4" ).is_err() );
+        assert!( interp.run( "fyz 1 2 3"   ).is_ok()  );
+        assert!( interp.run( "fyz 1 2"     ).is_ok()  );
+        assert!( interp.run( "fyz 1"       ).is_ok()  );
+        assert!( interp.run( "fyz"         ).is_err() );
+
+        assert!( interp.run( "fxz 1 2 3 4" ).is_err() );
+        assert!( interp.run( "fxz 1 2 3"   ).is_ok()  );
+        assert!( interp.run( "fxz 1 2"     ).is_ok()  );
+        assert!( interp.run( "fxz 1"       ).is_err() );
+        assert!( interp.run( "fxz"         ).is_err() );
+
+        assert!( interp.run( "cyz 1 2 3 4" ).is_err() );
+        assert!( interp.run( "cyz 1 2 3"   ).is_ok()  );
+        assert!( interp.run( "cyz 1 2"     ).is_ok()  );
+        assert!( interp.run( "cyz 1"       ).is_ok()  );
+        assert!( interp.run( "cyz"         ).is_err() );
+
+        assert!( interp.run( "cxz 1 2 3 4" ).is_err() );
+        assert!( interp.run( "cxz 1 2 3"   ).is_ok()  );
+        assert!( interp.run( "cxz 1 2"     ).is_ok()  );
+        assert!( interp.run( "cxz 1"       ).is_err() );
+        assert!( interp.run( "cxz"         ).is_err() );
+    }
 }

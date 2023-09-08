@@ -158,10 +158,12 @@ impl VisitMut for TclProc {
 
                 #(#attrs)* fn __tcl_inner_proc( #tcl_inputs ) #output #body
 
-                __tcl_inner_proc( __client_data, __tcl_interp, __objc, __objv )
-                .map( |value| unsafe {
-                    tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() );
-                }).ok();
+                match __tcl_inner_proc( __client_data, __tcl_interp, __objc, __objv ) {
+                    Ok( value ) => unsafe {
+                        tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() );
+                    },
+                    Err( _ ) => __tcl_completion_code = tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
+                }
 
                 __tcl_completion_code
             })
@@ -247,18 +249,77 @@ pub fn proc( _args: TokenStream, input: TokenStream ) -> TokenStream {
 
 fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, item_fn: ItemFn ) -> TokenStream {
     let ident = &item_fn.sig.ident;
+    let inputs = &item_fn.sig.inputs;
+
     let cmd = cmd.unwrap_or_else( || parse_quote!{ stringify!( #ident )});
     let args = args.unwrap_or_else( || parse_quote!( "" ));
 
-    let expanded = quote! {{
-        #[tcl::proc]
-        #[allow( unused_macros )]
-        #item_fn
+    let mut default_values = Vec::<>::with_capacity( inputs.len() );
+    for arg in inputs.iter().rev() {
+        if let FnArg::Typed( pat_type ) = arg {
+            let default_value =
+                (*pat_type).attrs.iter().find_map( |attr| {
+                    if let syn::Meta::List( meta_list ) = &attr.meta {
+                        let segments = &meta_list.path.segments;
+                        if segments.len() == 1 && segments.first().unwrap().ident == "default" {
+                            return Some( meta_list.tokens.clone() );
+                        }
+                    }
+                    None
+                })
+            ;
+            match default_value {
+                Some( value ) => {
+                    default_values.push( value );
+                },
+                None => break,
+            }
+        }
+    }
 
-        let cmd = #cmd;
-        unsafe{ (#interp).def_proc( cmd, #ident ); }
-        format!( "{} {}", cmd, #args )
-    }};
+    let expanded = if default_values.is_empty() {
+        quote! {{
+            #[tcl::proc]
+            #[allow( unused_macros )]
+            #item_fn
+
+            let cmd = #cmd;
+            unsafe{ (#interp).def_proc( cmd, #ident ); }
+            format!( "{} {}", cmd, #args )
+        }}
+    } else {
+        let argc = inputs.len();
+        let optional_argc = default_values.len();
+        let required_argc = argc - optional_argc;
+
+        let param_list = format!( "{}{}",
+            (0..required_argc   ).fold( String::new(), |acc,n|
+                format!( "{acc} arg{n}" )),
+            (required_argc..argc).fold( String::new(), |acc,n|
+                format!( "{acc} {{ arg{n} {} }}", default_values[ n-required_argc ])),
+        );
+        let params = (0..argc).fold( String::new(), |acc,n| format!( "{acc} $arg{n}" ));
+
+        let uuid = make_ident( &format!( "__tcl_fn_inner_{}", Uuid::new_v4().to_simple() ));
+        let name: Expr = parse_quote!{ &format!( "{}", stringify!( #uuid ))};
+
+        quote! {{
+            #[tcl::proc]
+            #[allow( unused_macros )]
+            #item_fn
+
+            let cmd = #cmd;
+            unsafe {
+                (#interp).def_proc( #name, #ident );
+
+                (#interp).run(
+                    format!( "proc {} {{ {} }} {{ {} {} }}", cmd, #param_list, #name, #params )
+                ).ok();
+            }
+
+            format!( "{} {}", cmd, #args )
+        }}
+    };
 
     expanded.into()
 }
@@ -278,6 +339,7 @@ fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, item_fn: It
 /// 3. args, the arguments provided in Tcl on executing the command. Optional.
 ///
 /// 4. func, the function defined in Rust.
+///   Note: an attribute `#[default(value)]` on an parameter will assign a default `value` for this parameter.
 ///
 /// # Output
 ///
@@ -352,6 +414,7 @@ pub fn tclfn( input: TokenStream ) -> TokenStream {
 /// 3. args, the arguments provided in Tcl on executing the command. Optional.
 ///
 /// 4. closure, the closure defined in Rust.
+///   Note: an attribute `#[default(value)]` on a parameter will assign a default `value` for this parameter.
 ///
 /// # Output
 ///
@@ -415,12 +478,6 @@ pub fn tclosure( input: TokenStream ) -> TokenStream {
 }
 
 fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut closure: ExprClosure ) -> TokenStream {
-    let ident = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
-    let cmd = cmd.unwrap_or_else( || parse_quote! {
-        &format!( "__tcl_fn_{}", stringify!( #ident ))
-    });
-    let args = args.unwrap_or_else( || parse_quote!( "" ));
-
     let output = match &closure.output {
         ReturnType::Default => parse_quote!( Result<(), tcl::error::InterpError> ),
         ReturnType::Type( _, ty ) => ty.clone(),
@@ -480,11 +537,27 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
     }};
 
     body.stmts.reserve( argc * 5 + existing_stmts.len() );
+    let mut default_values = Vec::<>::with_capacity( closure.inputs.len() );
     for (nth, arg) in closure.inputs.iter().enumerate() {
         match arg {
             Pat::Type( pat_type ) => {
                 let pat = &*pat_type.pat;
                 let ty = &*pat_type.ty;
+                let default_value =
+                    (*pat_type).attrs.iter().find_map( |attr| {
+                        if let syn::Meta::List( meta_list ) = &attr.meta {
+                            let segments = &meta_list.path.segments;
+                            if segments.len() == 1 && segments.first().unwrap().ident == "default" {
+                                return Some( meta_list.tokens.clone() );
+                            }
+                        }
+                        None
+                    })
+                ;
+                match default_value {
+                    Some( value ) => default_values.push( value ),
+                    None => default_values.clear(),
+                }
                 match &*ty {
                     Type::Reference( type_ref ) => match pat {
                         Pat::Ident( pat_ident ) => {
@@ -532,39 +605,102 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
 
     body.stmts.extend( existing_stmts );
 
-    let expanded = quote! {{
-        extern "C" fn #ident( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
-            let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
-            match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
-                Ok( value ) => {
-                    unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
-                    tcl::reexport_clib::TCL_OK as std::os::raw::c_int
-                },
-                Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
+    let args = args.unwrap_or_else( || parse_quote!( "" ));
+
+    let expanded = if default_values.is_empty() {
+        let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
+        let name = cmd.unwrap_or( parse_quote! { &format!( "__tcl_fn_{}", stringify!( #uuid ))});
+
+        quote! {{
+            extern "C" fn #uuid( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
+                let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
+                match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
+                    Ok( value ) => {
+                        unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
+                        tcl::reexport_clib::TCL_OK as std::os::raw::c_int
+                    },
+                    Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
+                }
             }
-        }
 
-        extern "C" fn __deleter( __client_data: tcl::reexport_clib::ClientData ) {
-            let _: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
-        }
+            extern "C" fn __deleter( __client_data: tcl::reexport_clib::ClientData ) {
+                let _: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
+            }
 
-        fn __box_new_static_closure<F>( f: F ) -> Box<F>
-            where F: 'static + Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> #output
-        {
-            Box::new( f )
-        }
+            fn __box_new_static_closure<F>( f: F ) -> Box<F>
+                where F: 'static + Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> #output
+            {
+                Box::new( f )
+            }
 
-        let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
-            #(#attrs)*
-            #[allow( unused_macros )]
-            #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
-        ));
-        let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
+            let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
+                #(#attrs)*
+                #[allow( unused_macros )]
+                #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
+            ));
+            let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
 
-        let cmd = #cmd;
-        unsafe{ (#interp).def_proc_with_client_data( cmd, #ident, client_data, Some( __deleter )); }
-        format!( "{} {}", cmd, #args )
-    }};
+            let name = #name;
+            unsafe{ (#interp).def_proc_with_client_data( name, #uuid, client_data, Some( __deleter )); }
+            format!( "{} {}", name, #args )
+        }}
+    } else {
+        let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
+        let name: Expr = parse_quote!{ &format!( "__tcl_fn_{}", stringify!( #uuid ))};
+        let cmd = cmd.unwrap_or_else( || parse_quote!{ &format!( "__tcl_fn_with_optional_args{}", stringify!( #uuid ))});
+
+        let optional_argc = default_values.len();
+        let required_argc = argc - optional_argc;
+
+        let param_list = format!( "{}{}",
+            (0..required_argc   ).fold( String::new(), |acc,n|
+                format!( "{acc} arg{n}" )),
+            (required_argc..argc).fold( String::new(), |acc,n|
+                format!( "{acc} {{ arg{n} {} }}", default_values[ n-required_argc ])),
+        );
+        let params = (0..argc).fold( String::new(), |acc,n| format!( "{acc} $arg{n}" ));
+
+        quote! {{
+            extern "C" fn #uuid( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
+                let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
+                match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
+                    Ok( value ) => {
+                        unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
+                        tcl::reexport_clib::TCL_OK as std::os::raw::c_int
+                    },
+                    Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
+                }
+            }
+
+            extern "C" fn __deleter( __client_data: tcl::reexport_clib::ClientData ) {
+                let _: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
+            }
+
+            fn __box_new_static_closure<F>( f: F ) -> Box<F>
+                where F: 'static + Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> #output
+            {
+                Box::new( f )
+            }
+
+            let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
+                #(#attrs)*
+                #[allow( unused_macros )]
+                #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
+            ));
+            let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
+
+            let cmd = #cmd;
+
+            unsafe {
+                (#interp).def_proc_with_client_data( #name, #uuid, client_data, Some( __deleter ));
+                (#interp).run(
+                    format!( "proc {} {{ {} }} {{ {} {} }}", cmd, #param_list, #name, #params )
+                ).ok();
+
+                format!( "{} {}", cmd, #args )
+            }
+        }}
+    };
 
     expanded.into()
 }

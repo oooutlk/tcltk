@@ -1,6 +1,6 @@
 [package]
 name = "tcl"
-version = "0.1.5"
+version = "0.1.6"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -14,7 +14,7 @@ mutf8 = "0.2.0"
 tuplex = "0.1"
 serde = { version = "1.0", features=["derive"] }
 serde_derive = "1.0"
-tcl_derive = { path = "../tcl_derive", version = "0.1.1" }
+tcl_derive = { path = "../tcl_derive", version = "0.1.2" }
 enumx = "0.4"
 cex = "0.5"
 

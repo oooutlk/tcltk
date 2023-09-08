@@ -1,6 +1,6 @@
 [package]
 name = "tcl_derive"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -14,5 +14,5 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "1.0", features = ["extra-traits","full","visit-mut"] }
+syn = { version = "2.0", features = ["extra-traits","full","visit-mut"] }
 uuid = { version = "0.8", features = ["v4"] }
