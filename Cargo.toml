@@ -4,3 +4,4 @@ members = [
     "tcl_derive",
     "tk",
 ]
+resolver = "2"

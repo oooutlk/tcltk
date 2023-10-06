@@ -104,34 +104,11 @@
 //!     window.wm_title()?;
 //!     ```
 //!
-//! # Why I gave up writing most documents
+//! # Documents
 //!
-//! I planned to write doc comments for every public types, traits, macros and functions in this crate.
-//! Isn't it very bold? All APIs, 100% well documented in doc comments.
-//! My earlier crates' APIs are nearly 100% documented.
-//! I thought a well documented crate would make all users excited.
-//! It is estimated to take only 20-25 days to fill all APIs with doc comments.
-//! But finally I gave up. Why? I read through the [official Tk command references](https://www.tcl.tk/man/tcl/TkCmd),
-//! and could not make my mind to translate it in Rust.
-//! Do you know what the biggest problem is? Certainly it's an engineering problem.
-//! Firstly, in a brief, the biggest problem is development efficiency.
-//! No time for documenting, for an experimental crate in its version 0.1.0.
-//! Fundamental APIs may evolve in later versions 0.2, 0.3...etc, just like they evolved in unpublished 0.0.x versions.
-//! Once changed, it may be necessary to change a lot of doc comments, taking another time budget of 20-25 days.
-//! Too slow for rapid developing.
-//! Secondly, the probability of wasting the effort to providing document in Rust is more than 50%.
-//! The users of this crate may be familiar with Tcl/Tk programming,
-//! and they can master immediately 95% usage of this crate after reading a few demonstration code.
-//! Even users who are not familiar with Tk, can translate between Tcl and Rust themselves
-//! when reading the Tk command reference, with the help of *naming conventions* described above.
-//! I have learned that 100% documenting this experimental crate will do harm to development efficiency,
-//! and lose a chance to take advantage of the existing high quality documentation of Tcl/Tk library,
-//! to which this crate provides bindings. Which is more important, 100% document coverage, or rapid development?
-//! It is a pity that `cargo doc` produces little content here, but lucky for me to be sane.
+//! 1. [Tk tutorial](https://oooutlk.github.io/tk/)
 //!
-//! # The tutorial book
-//!
-//! Luckily, I've got enough time to translate in Rust the [Tk tutorial](https://oooutlk.github.io/tk/).
+//! 2. [Official Tk command references](https://www.tcl.tk/man/tcl/TkCmd/contents.html)
 
 use enumx::export::*;
 use enumx::predefined::*;

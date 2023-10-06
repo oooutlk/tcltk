@@ -1102,13 +1102,13 @@ impl<Inst:TkInstance> Widget<Inst> {
 
     #[cex]
     pub fn pack_slaves( &self ) -> Result!( Vec<Widget<Inst>> throws InterpError, NotList, WidgetNotFound ) {
-        let slaves = self.tk().eval(( "pack", "slaves", self.deref().path ))?;
+        let slaves = self.tk().eval(( "pack", "slaves", self.path ))?;
         ret!( self.tk().widgets_from_obj( slaves ))
     }
 
     #[cex]
     pub fn place_slaves( &self ) -> Result!( Vec<Widget<Inst>> throws InterpError, NotList, WidgetNotFound ) {
-        let slaves = self.tk().eval(( "place", "slaves", self.deref().path ))?;
+        let slaves = self.tk().eval(( "place", "slaves", self.path ))?;
         ret!( self.tk().widgets_from_obj( slaves ))
     }
 }
