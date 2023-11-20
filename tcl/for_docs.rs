@@ -249,6 +249,11 @@ pub struct Tcl_ObjType {
     pub setFromAnyProc: Tcl_SetFromAnyProc,
 }
 pub const TCL_OK: u32 = 0;
+pub fn Tcl_PkgProvide(
+    interp: *mut Tcl_Interp,
+    name: *const ::std::os::raw::c_char,
+    version: *const ::std::os::raw::c_char,
+) -> ::std::os::raw::c_int {t!();}
 pub fn Tcl_Panic(format: *const ::std::os::raw::c_char) -> ! {t!();}
 pub fn Tcl_RegisterObjType(typePtr: *const Tcl_ObjType) {t!();}
 pub type Tcl_SetFromAnyProc = ::std::option::Option<

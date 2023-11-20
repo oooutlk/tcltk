@@ -78,7 +78,7 @@ pub fn button_press_2   () -> TkEvent { TkEvent( "<ButtonPress-2>"   .to_owned()
 pub fn button_press_3   () -> TkEvent { TkEvent( "<ButtonPress-3>"   .to_owned() )}
 pub fn button_press_4   () -> TkEvent { TkEvent( "<ButtonPress-4>"   .to_owned() )}
 pub fn button_press_5   () -> TkEvent { TkEvent( "<ButtonPress-5>"   .to_owned() )}
-pub fn button_pelease   () -> TkEvent { TkEvent( "<ButtonRelease>"   .to_owned() )}
+pub fn button_release   () -> TkEvent { TkEvent( "<ButtonRelease>"   .to_owned() )}
 pub fn button_release_1 () -> TkEvent { TkEvent( "<ButtonRelease-1>" .to_owned() )}
 pub fn button_release_2 () -> TkEvent { TkEvent( "<ButtonRelease-2>" .to_owned() )}
 pub fn button_release_3 () -> TkEvent { TkEvent( "<ButtonRelease-3>" .to_owned() )}
@@ -110,6 +110,8 @@ pub fn visibility       () -> TkEvent { TkEvent( "<Visibility>"      .to_owned()
 
 pub fn key_press  ( key: impl Into<TkKey> ) -> TkEvent { TkEvent( format!( "<KeyPress-{}>"  , key.into().to_string() ))}
 pub fn key_release( key: impl Into<TkKey> ) -> TkEvent { TkEvent( format!( "<KeyRelease-{}>", key.into().to_string() ))}
+pub fn any_key_press  () -> TkEvent { TkEvent( "<KeyPress>"  .to_owned() )}
+pub fn any_key_release() -> TkEvent { TkEvent( "<KeyRelease>".to_owned() )}
 
 pub fn virtual_event( name: &str ) -> TkEvent { TkEvent( format!( "<<{}>>", name ))}
 
@@ -121,7 +123,7 @@ impl TkModifier {
     pub fn button_press_3   ( mut self ) -> TkEvent { self.0.push_str( "-ButtonPress-3>"    ); TkEvent( self.0 )}
     pub fn button_press_4   ( mut self ) -> TkEvent { self.0.push_str( "-ButtonPress-4>"    ); TkEvent( self.0 )}
     pub fn button_press_5   ( mut self ) -> TkEvent { self.0.push_str( "-ButtonPress-5>"    ); TkEvent( self.0 )}
-    pub fn button_pelease   ( mut self ) -> TkEvent { self.0.push_str( "-ButtonRelease>"    ); TkEvent( self.0 )}
+    pub fn button_release   ( mut self ) -> TkEvent { self.0.push_str( "-ButtonRelease>"    ); TkEvent( self.0 )}
     pub fn button_release_1 ( mut self ) -> TkEvent { self.0.push_str( "-ButtonRelease-1>"  ); TkEvent( self.0 )}
     pub fn button_release_2 ( mut self ) -> TkEvent { self.0.push_str( "-ButtonRelease-2>"  ); TkEvent( self.0 )}
     pub fn button_release_3 ( mut self ) -> TkEvent { self.0.push_str( "-ButtonRelease-3>"  ); TkEvent( self.0 )}
@@ -153,6 +155,8 @@ impl TkModifier {
 
     pub fn key_press  ( mut self, key: impl Into<TkKey> ) -> TkEvent { self.0.push_str( &format!( "-KeyPress-{}>"  , key.into().to_string() )); TkEvent( self.0 )}
     pub fn key_release( mut self, key: impl Into<TkKey> ) -> TkEvent { self.0.push_str( &format!( "-KeyRelease-{}>", key.into().to_string() )); TkEvent( self.0 )}
+    pub fn any_key_press  ( mut self ) -> TkEvent { self.0.push_str( "-KeyPress>"   ); TkEvent( self.0 )}
+    pub fn any_key_release( mut self ) -> TkEvent { self.0.push_str( "-KeyRelease>" ); TkEvent( self.0 )}
 }
 
 impl TkEvent {
@@ -211,7 +215,7 @@ impl TkEventSeq {
     pub fn button_press_3   ( mut self ) -> Self { self.0.push_str( "<ButtonPress-3>"    ); self }
     pub fn button_press_4   ( mut self ) -> Self { self.0.push_str( "<ButtonPress-4>"    ); self }
     pub fn button_press_5   ( mut self ) -> Self { self.0.push_str( "<ButtonPress-5>"    ); self }
-    pub fn button_pelease   ( mut self ) -> Self { self.0.push_str( "<ButtonRelease>"    ); self }
+    pub fn button_release   ( mut self ) -> Self { self.0.push_str( "<ButtonRelease>"    ); self }
     pub fn button_release_1 ( mut self ) -> Self { self.0.push_str( "<ButtonRelease-1>"  ); self }
     pub fn button_release_2 ( mut self ) -> Self { self.0.push_str( "<ButtonRelease-2>"  ); self }
     pub fn button_release_3 ( mut self ) -> Self { self.0.push_str( "<ButtonRelease-3>"  ); self }
@@ -243,6 +247,8 @@ impl TkEventSeq {
 
     pub fn key_press  ( mut self, key: impl Into<TkKey> ) -> Self { self.0.push_str( &format!( "<KeyPress-{}>"  , key.into().to_string() )); self }
     pub fn key_release( mut self, key: impl Into<TkKey> ) -> Self { self.0.push_str( &format!( "<KeyRelease-{}>", key.into().to_string() )); self }
+    pub fn any_key_press  ( mut self ) -> Self { self.0.push_str( "<KeyPress>"  ); self }
+    pub fn any_key_release( mut self ) -> Self { self.0.push_str( "<KeyRelease>" ); self }
 }
 
 impl TkEventSeq {
