@@ -56,7 +56,7 @@ fn main() -> TkResult<()> {
 
     Widget::bind(
         &canvas,
-        event::button_1().button_pelease(),
+        event::button_1().button_release(),
         tclosure!( tk, move || ->TkResult<()> {
             Ok( canvas.itemconfigure( item_tag( "currentline" ), -width(1) )? )
         })
