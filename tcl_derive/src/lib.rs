@@ -494,6 +494,7 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
     if is_variadic {
         closure.inputs.pop();
     }
+    let non_variadic_argc = if is_variadic { argc-1 } else { argc };
 
     let body = &*closure.body;
     let expr_block: ExprBlock = if let Expr::Block( block ) = body {
@@ -518,8 +519,9 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
             }
         }
 
-        let mut __objs = __origin_objs[..#argc].to_vec();
-        let mut __variadic_args = __origin_objs[#argc..].to_vec();
+        let mut __objs = __origin_objs[..#non_variadic_argc].to_vec();
+        let mut __variadic_args = __origin_objs[#non_variadic_argc..]
+            .iter().map( |obj_ptr| unsafe{ Obj::from_raw( *obj_ptr )}).collect::<Vec<Obj>>();
         use std::convert::TryFrom;
 
         let mut __ref_objs = std::collections::HashMap::<&'static str, *mut tcl::reexport_clib::Tcl_Obj>::new();
@@ -533,7 +535,7 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
         }
 
         macro_rules! tcl_interp { () => { __interp }}
-        macro_rules! tcl_variadic_args { () => { __variadic_args }}
+        macro_rules! tcl_va_args { () => { __variadic_args }}
     }};
 
     body.stmts.reserve( argc * 5 + existing_stmts.len() );

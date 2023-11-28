@@ -220,7 +220,7 @@ pub use range::{
 };
 
 pub mod traits;
-pub use traits::{Delete, TkBBoxTrait, TkEntryTraits, TkXView, TkYView};
+pub use traits::{Delete, TkBBoxTrait, TkEntryTraits, TkXView, TkXViewIndex, TkYView, TkYViewIndex};
 
 pub mod types;
 pub use types::{

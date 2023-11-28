@@ -16,7 +16,7 @@ fn main() -> TkResult<()> {
     let s = root.add_ttk_scrollbar( "s"
             -orient("vertical")
             -command( tclosure!( tk,
-                move |..| -> TkResult<(c_double, c_double)> { Ok( l.yview()? )})))?
+                move |..| -> TkResult<()> { Ok( l.yview_( tcl_va_args!() )? )})))?
         .grid( -column(1) -row(0) -sticky("ns") )?;
 
     l.configure( -yscrollcommand( tclosure!( tk,

@@ -3,6 +3,7 @@ use crate::{
     TkEntryTraits,
     TkInstance,
     TkXView,
+    TkXViewIndex,
     TtkCommonTraits,
     Widget,
     range::{
@@ -113,6 +114,8 @@ impl<TK:TkInstance> TkEntryTraits<TK> for TtkCombobox<TK> {
     type Index = super::ttk_entry::Index;
 }
 
-impl<TK:TkInstance> TkXView<TK> for TtkCombobox<TK> {
+impl<TK:TkInstance> TkXView<TK> for TtkCombobox<TK> {}
+
+impl<TK:TkInstance> TkXViewIndex<TK> for TtkCombobox<TK> {
     type Index = super::ttk_entry::Index;
 }

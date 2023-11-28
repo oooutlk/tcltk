@@ -4,6 +4,7 @@ use crate::{
     TkEntryTraits,
     TkInstance,
     TkXView,
+    TkXViewIndex,
     TtkCommonTraits,
     Widget,
     range::{
@@ -116,6 +117,8 @@ impl<Inst:TkInstance> TkEntryTraits<Inst> for TtkEntry<Inst> {
     type Index = Index;
 }
 
-impl<Inst:TkInstance> TkXView<Inst> for TtkEntry<Inst> {
+impl<Inst:TkInstance> TkXView<Inst> for TtkEntry<Inst> {}
+
+impl<Inst:TkInstance> TkXViewIndex<Inst> for TtkEntry<Inst> {
     type Index = Index;
 }

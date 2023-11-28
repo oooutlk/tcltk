@@ -4,6 +4,7 @@ use crate::{
     TkEntryTraits,
     TkInstance,
     TkXView,
+    TkXViewIndex,
     TtkCommonTraits,
     Widget,
     traits::Delete,
@@ -37,6 +38,8 @@ impl<TK:TkInstance> TkEntryTraits<TK> for TtkSpinbox<TK> {
     type Index = Index;
 }
 
-impl<TK:TkInstance> TkXView<TK> for TtkSpinbox<TK> {
+impl<TK:TkInstance> TkXView<TK> for TtkSpinbox<TK> {}
+
+impl<TK:TkInstance> TkXViewIndex<TK> for TtkSpinbox<TK> {
     type Index = Index;
 }

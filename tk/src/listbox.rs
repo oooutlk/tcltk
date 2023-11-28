@@ -8,6 +8,10 @@ use crate::{
     TkBBoxTrait,
     TkInstance,
     TkOption,
+    TkXView,
+    TkXViewIndex,
+    TkYView,
+    TkYViewIndex,
     Widget,
     opt::{
         OptPair,
@@ -27,7 +31,6 @@ use std::{
         RangeToInclusive,
     },
     os::raw::{
-        c_double,
         c_int,
         c_longlong,
     },
@@ -342,62 +345,20 @@ impl<Inst:TkInstance> TkListbox<Inst> {
         let obj = self.0.tk().eval(( self.0.path, "size" ))?;
         self.0.tk().longlong( obj )
     }
-
-    // trait?
-    #[cex]
-    pub fn xview( &self ) -> Result!( (c_double, c_double) throws DeError, InterpError ) {
-        let obj = self.0.tk().eval(( self.0.path, "xview" ))?;
-        ret!( from_obj::<(c_double, c_double)>( obj ));
-    }
-
-    // trait?
-    pub fn xview_index( &self, index: impl Into<Index> ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "xview", index.into() ))
-    }
-
-    // trait?
-    pub fn xview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "xview", "move_to", fraction ))
-    }
-
-    // trait?
-    pub fn xview_scroll_units( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "xview", "scroll", number, "units" ))
-    }
-
-    // trait?
-    pub fn xview_scroll_pages( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "xview", "scroll", number, "pages" ))
-    }
-
-    // trait?
-    #[cex]
-    pub fn yview( &self ) -> Result!( (c_double, c_double) throws DeError, InterpError ) {
-        let obj = self.0.tk().eval(( self.0.path, "yview" ))?;
-        ret!( from_obj::<(c_double, c_double)>( obj ));
-    }
-
-    // trait?
-    pub fn yview_index( &self, index: impl Into<Index> ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", index.into() ))
-    }
-
-    // trait?
-    pub fn yview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", "move_to", fraction ))
-    }
-
-    // trait?
-    pub fn yview_scroll_units( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", "scroll", number, "units" ))
-    }
-
-    // trait?
-    pub fn yview_scroll_pages( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", "scroll", number, "pages" ))
-    }
 }
 
 impl<Inst:TkInstance> TkBBoxTrait<Inst> for TkListbox<Inst> {
+    type Index = Index;
+}
+
+impl<TK:TkInstance> TkXView<TK> for TkListbox<TK> {}
+
+impl<TK:TkInstance> TkXViewIndex<TK> for TkListbox<TK> {
+    type Index = Index;
+}
+
+impl<TK:TkInstance> TkYView<TK> for TkListbox<TK> {}
+
+impl<TK:TkInstance> TkYViewIndex<TK> for TkListbox<TK> {
     type Index = Index;
 }

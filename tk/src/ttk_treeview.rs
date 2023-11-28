@@ -9,7 +9,9 @@ use crate::{
     TkInstance,
     TkOption,
     TkXView,
+    TkXViewIndex,
     TkYView,
+    TkYViewIndex,
     TtkCommonTraits,
     TtkTreeviewRegion,
     Widget,
@@ -462,10 +464,14 @@ impl<TK:TkInstance> TtkTreeview<TK> {
 
 impl<TK:TkInstance> TtkCommonTraits<TK> for TtkTreeview<TK> {}
 
-impl<TK:TkInstance> TkXView<TK> for TtkTreeview<TK> {
+impl<TK:TkInstance> TkXView<TK> for TtkTreeview<TK> {}
+
+impl<TK:TkInstance> TkXViewIndex<TK> for TtkTreeview<TK> {
     type Index = Index;
 }
 
-impl<TK:TkInstance> TkYView<TK> for TtkTreeview<TK> {
+impl<TK:TkInstance> TkYView<TK> for TtkTreeview<TK> {}
+
+impl<TK:TkInstance> TkYViewIndex<TK> for TtkTreeview<TK> {
     type Index = Index;
 }

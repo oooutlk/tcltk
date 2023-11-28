@@ -1,6 +1,8 @@
 use crate::{
     InterpResult,
     TkInstance,
+    TkXView,
+    TkXViewIndex,
     Widget,
     range::{
         TkDefaultEnd,
@@ -128,6 +130,8 @@ impl<Inst:TkInstance> crate::TkEntryTraits<Inst> for TkEntry<Inst> {
     type Index = Index;
 }
 
-impl<Inst:TkInstance> crate::TkXView<Inst> for TkEntry<Inst> {
+impl<TK:TkInstance> TkXView<TK> for TkEntry<TK> {}
+
+impl<TK:TkInstance> TkXViewIndex<TK> for TkEntry<TK> {
     type Index = Index;
 }

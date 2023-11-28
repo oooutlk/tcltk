@@ -6,6 +6,8 @@ use crate::{
     TkInstance,
     TkOption,
     TkRectangle,
+    TkXView,
+    TkYView,
     Widget,
     WmManage,
     error::{
@@ -46,10 +48,7 @@ use std::{
     str::FromStr,
 };
 
-use tcl::{
-    Obj,
-    from_obj,
-};
+use tcl::Obj;
 
 use tuplex::{IntoHomoTuple, NonZeroLen};
 
@@ -614,40 +613,8 @@ impl<Inst:TkInstance> TkCanvas<Inst> {
             Ok( Some( <ItemType as FromStr>::from_str( &result ).unwrap() ))
         }
     }
-
-    #[cex]
-    pub fn xview( &self ) -> Result!( (c_double, c_double) throws DeError, InterpError ) {
-        let obj = self.tk().eval(( self.path, "xview" ))?;
-        Ok( from_obj::<(c_double, c_double)>( obj )? )
-    }
-
-    pub fn xview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
-        self.tk().run(( self.path, "xview", "moveto", fraction ))
-    }
-
-    pub fn xview_scroll_units( &self, number: c_int ) -> InterpResult<()> {
-        self.tk().run(( self.path, "xview", "scroll", number, "units" ))
-    }
-
-    pub fn xview_scroll_pages( &self, number: c_int ) -> InterpResult<()> {
-        self.tk().run(( self.path, "xview", "scroll", number, "units" ))
-    }
-
-    #[cex]
-    pub fn yview( &self ) -> Result!( (c_double, c_double) throws DeError, InterpError ) {
-        let obj = self.tk().eval(( self.path, "yview" ))?;
-        Ok( from_obj::<(c_double, c_double)>( obj )? )
-    }
-
-    pub fn yview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
-        self.tk().run(( self.path, "yview", "moveto", fraction ))
-    }
-
-    pub fn yview_scroll_units( &self, number: c_int ) -> InterpResult<()> {
-        self.tk().run(( self.path, "yview", "scroll", number, "units" ))
-    }
-
-    pub fn yview_scroll_pages( &self, number: c_int ) -> InterpResult<()> {
-        self.tk().run(( self.path, "yview", "scroll", number, "units" ))
-    }
 }
+
+impl<TK:TkInstance> TkXView<TK> for TkCanvas<TK> {}
+
+impl<TK:TkInstance> TkYView<TK> for TkCanvas<TK> {}

@@ -11,6 +11,10 @@ use crate::{
     TkDefaultEnd,
     TkInstance,
     TkOption,
+    TkXView,
+    TkXViewIndex,
+    TkYView,
+    TkYViewIndex,
     Widget,
     error::{
         TagRangesNotInPair,
@@ -1045,46 +1049,12 @@ impl<Inst:TkInstance> self::TkText<Inst> {
                 .collect::<Vec<_>>() )
     }
 
-    #[cex]
-    pub fn xview( &self ) -> Result!( (c_double, c_double) throws DeError, InterpError ) {
-        let obj = self.0.tk().eval(( self.0.path, "xview" ))?;
-        ret!( from_obj::<(c_double, c_double)>( obj ));
-    }
-
-    pub fn xview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "xview", "moveto", fraction ))
-    }
-
-    pub fn xview_scroll_units( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "xview", "scroll", number, "units" ))
-    }
-
-    pub fn xview_scroll_pages( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "xview", "scroll", number, "pages" ))
-    }
-
     pub fn xview_scroll_pixels( &self, number: c_double ) -> InterpResult<()> {
         self.0.tk().run(( self.0.path, "xview", "scroll", number, "pixels" ))
     }
 
-    pub fn yview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", "moveto", fraction ))
-    }
-
-    pub fn yview_scroll_units( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", "scroll", number, "units" ))
-    }
-
-    pub fn yview_scroll_pages( &self, number: c_double ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", "scroll", number, "pages" ))
-    }
-
     pub fn yview_scroll_pixels( &self, number: c_double ) -> InterpResult<()> {
         self.0.tk().run(( self.0.path, "yview", "scroll", number, "pixels" ))
-    }
-
-    pub fn yview( &self, index: Index ) -> InterpResult<()> {
-        self.0.tk().run(( self.0.path, "yview", index ))
     }
 }
 
@@ -1093,5 +1063,17 @@ impl<Inst:TkInstance> crate::TkBBoxTrait<Inst> for self::TkText<Inst> {
 }
 
 impl<Inst:TkInstance> Delete<Inst> for TkText<Inst> {
+    type Index = Index;
+}
+
+impl<TK:TkInstance> TkXView<TK> for TkText<TK> {}
+
+impl<TK:TkInstance> TkXViewIndex<TK> for TkText<TK> {
+    type Index = Index;
+}
+
+impl<TK:TkInstance> TkYView<TK> for TkText<TK> {}
+
+impl<TK:TkInstance> TkYViewIndex<TK> for TkText<TK> {
     type Index = Index;
 }

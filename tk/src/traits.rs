@@ -41,18 +41,11 @@ pub trait TkBBoxTrait<Inst:TkInstance>
 pub trait TkXView<Inst:TkInstance>
     where Self: Deref<Target=Widget<Inst>>
 {
-    type Index: Into<Obj>;
-
     #[cex]
     fn xview( &self ) -> Result!( (c_double, c_double) throws DeError, InterpError ) {
         let widget = self.deref();
         let obj = widget.tk().eval(( widget.path, "xview" ))?;
         ret!( from_obj::<(c_double, c_double)>( obj ));
-    }
-
-    fn xview_index( &self, index: Self::Index ) -> InterpResult<()> {
-        let widget = self.deref();
-        widget.tk().run(( widget.path, "xview", index ))
     }
 
     fn xview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
@@ -69,23 +62,36 @@ pub trait TkXView<Inst:TkInstance>
         let widget = self.deref();
         widget.tk().run(( widget.path, "xview", "scroll", number, "pages" ))
     }
+
+    fn xview_( &self, mut args: Vec<Obj> ) -> InterpResult<()> {
+        let widget = self.deref();
+        let mut command = Vec::<Obj>::with_capacity( 2 + args.len() );
+        command.push( widget.path.into() );
+        command.push( "xview".into() );
+        command.append( &mut args );
+        widget.tk().run( command )
+    }
+}
+
+pub trait TkXViewIndex<Inst:TkInstance>
+    where Self: Deref<Target=Widget<Inst>>
+{
+    type Index: Into<Obj>;
+
+    fn xview_index( &self, index: Self::Index ) -> InterpResult<()> {
+        let widget = self.deref();
+        widget.tk().run(( widget.path, "xview", index ))
+    }
 }
 
 pub trait TkYView<Inst:TkInstance>
     where Self: Deref<Target=Widget<Inst>>
 {
-    type Index: Into<Obj>;
-
     #[cex]
     fn yview( &self ) -> Result!( (c_double, c_double) throws DeError, InterpError ) {
         let widget = self.deref();
         let obj = widget.tk().eval(( widget.path, "yview" ))?;
         ret!( from_obj::<(c_double, c_double)>( obj ));
-    }
-
-    fn yview_index( &self, index: Self::Index ) -> InterpResult<()> {
-        let widget = self.deref();
-        widget.tk().run(( widget.path, "yview", index ))
     }
 
     fn yview_moveto( &self, fraction: c_double ) -> InterpResult<()> {
@@ -101,6 +107,26 @@ pub trait TkYView<Inst:TkInstance>
     fn yview_scroll_pages( &self, number: c_double ) -> InterpResult<()> {
         let widget = self.deref();
         widget.tk().run(( widget.path, "yview", "scroll", number, "pages" ))
+    }
+
+    fn yview_( &self, mut args: Vec<Obj> ) -> InterpResult<()> {
+        let widget = self.deref();
+        let mut command = Vec::<Obj>::with_capacity( 2 + args.len() );
+        command.push( widget.path.into() );
+        command.push( "yview".into() );
+        command.append( &mut args );
+        widget.tk().run( command )
+    }
+}
+
+pub trait TkYViewIndex<Inst:TkInstance>
+    where Self: Deref<Target=Widget<Inst>>
+{
+    type Index: Into<Obj>;
+
+    fn yview_index( &self, index: Self::Index ) -> InterpResult<()> {
+        let widget = self.deref();
+        widget.tk().run(( widget.path, "yview", index ))
     }
 }
 
