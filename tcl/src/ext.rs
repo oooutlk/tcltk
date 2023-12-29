@@ -265,8 +265,10 @@ impl From<u64> for Obj {
     fn from( v: u64 ) -> Obj {
         let mut obj = Obj::new();
         unsafe {
-            obj.0.as_mut().typePtr = register_or_get_tcl_obj_type::<u64>();
-            obj.0.as_mut().internalRep.twoPtrValue.ptr1 = v as *mut c_void;
+            let obj_ptr = obj.0.as_mut();
+            (*obj_ptr).typePtr = register_or_get_tcl_obj_type::<u64>();
+            (*obj_ptr).internalRep.twoPtrValue.ptr1 = v as *mut c_void;
+            u64_update_string( obj_ptr );
         }
         obj
     }
@@ -338,4 +340,13 @@ unsafe extern "C" fn u64_set_from_any( _interp: *mut clib::Tcl_Interp, obj_ptr: 
     }
 
     clib::TCL_ERROR as c_int
+}
+
+#[cfg( test )]
+mod tests {
+    #[test]
+    fn test_u64() {
+        let obj = crate::Obj::from( 42_u64 );
+        assert_eq!( obj.get_string(), "42" );
+    }
 }
