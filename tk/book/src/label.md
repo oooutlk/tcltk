@@ -124,7 +124,7 @@ using `grid`, you may need to adjust the `sticky` options. When debugging, it
 can help to change the background color of each widget, so you know exactly
 where each is positioned. This is a good example of those "one-off" cases we
 just mentioned where you might use configuration options rather than styles to
-modify appearance. 
+modify appearance.
 
 ## Multi-line Labels
 

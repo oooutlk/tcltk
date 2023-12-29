@@ -17,7 +17,7 @@ fn main() -> TkResult<()> {
 
     println!( "{:#?}", tk.font_measure( Font::<()>::Name( "TkTextFont" ), "The quick brown fox" )? );
     // e.g. 124
- 
+
     tk.font_create( "AppHighlightFont", -family("Helvetica") -size(12) -weight("bold") )?;
     root.add_ttk_label( "l" -text("Attention!") -font("AppHighlightFont") )?
         .grid(())?;

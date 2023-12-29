@@ -10,7 +10,7 @@ fn main() -> TkResult<()> {
         .pack(())?;
 
     let script = tclosure!( tk,
-        move || -> TkResult<()> { Ok( println!( "combobox {} item selected: {}", country.path(), country.get()? ))}
+        || -> TkResult<()> { Ok( println!( "combobox {} item selected: {}", country.path(), country.get()? ))}
     );
 
     country.bind( event::virtual_event( "ComboboxSelected" ), script )?;

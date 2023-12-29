@@ -94,7 +94,7 @@ In canvas widgets, only individual canvas items have configuration options that
 control their appearance. When we refer to a tag in a canvas, the meaning of
 that is identical to "all canvas items presently having that tag." The tag
 itself doesn't exist as a separate object. So in the following snippet, the last
-rectangle added will not be colored red. 
+rectangle added will not be colored red.
 
 ```rust,no_run
 canvas.itemconfigure( item_tag("important"), -fill("red") )?;

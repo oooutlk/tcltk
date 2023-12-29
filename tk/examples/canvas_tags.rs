@@ -31,6 +31,6 @@ fn main() -> TkResult<()> {
     assert_eq!(
         items.get_elements()?.map( |item| item.get_string() ).collect::<Vec<_>>(),
         vec![ "1".to_owned(), "2".to_owned() ]);
- 
+
     Ok( main_loop() )
 }

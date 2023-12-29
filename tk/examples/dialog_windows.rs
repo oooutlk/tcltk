@@ -13,12 +13,12 @@ fn main() -> TkResult<()> {
     let l = root
         .add_ttk_label( "l" -text("Hello World") -font("helvetica 24") )?
         .grid( -padx(10) -pady(10) )?;
-    tclosure!( tk, cmd:"font_changed",
-        move |some_font:Obj| -> TkResult<()> {
+    let on_font_changed = tclosure!( tk,
+        |some_font:Obj| -> TkResult<()> {
             Ok( l.configure( -font(some_font) )? )
         }
     );
-    tk.fontchooser_configure( -font("helvetica 24") -command("font_changed") )?;
+    tk.fontchooser_configure( -font("helvetica 24") -command(on_font_changed) )?;
 
     tk.fontchooser_show()?;
     tk.fontchooser_hide()?;

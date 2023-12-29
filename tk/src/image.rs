@@ -13,7 +13,7 @@ use crate::{
 use tuplex::*;
 
 impl<Inst:TkInstance> Tk<Inst> {
-    pub fn image_create_bitmap<Opts>( &self, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Bitmap<Inst>>
+    pub fn image_create_bitmap<Opts>( &self, path_opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Bitmap<Inst>>
         where Opts: IntoHomoTuple<opt::TkBitmapOpt>
                   + IntoHomoTuple<OptPair>
     {
@@ -21,11 +21,15 @@ impl<Inst:TkInstance> Tk<Inst> {
         command.push( "image"   .into() );
         command.push( "create"  .into() );
         command.push( "bitmap"  .into() );
-        cmd::append_opts( &mut command, opts.into().opts );
+        let path_opts = path_opts.into();
+        if !path_opts.path.is_empty() {
+            command.push( path_opts.path.into() );
+        }
+        cmd::append_opts( &mut command, path_opts.opts );
         self.eval( command ).map( |name| Bitmap{ name, inst: self.inst })
     }
 
-    pub fn image_create_photo<Opts>( &self, opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Photo<Inst>>
+    pub fn image_create_photo<Opts>( &self, path_opts: impl Into<PathOptsWidgets<Opts,()>> ) -> InterpResult<Photo<Inst>>
         where Opts: IntoHomoTuple<opt::TkPhotoOpt>
                   + IntoHomoTuple<OptPair>
     {
@@ -33,7 +37,11 @@ impl<Inst:TkInstance> Tk<Inst> {
         command.push( "image"   .into() );
         command.push( "create"  .into() );
         command.push( "photo"   .into() );
-        cmd::append_opts( &mut command, opts.into().opts );
+        let path_opts = path_opts.into();
+        if !path_opts.path.is_empty() {
+            command.push( path_opts.path.into() );
+        }
+        cmd::append_opts( &mut command, path_opts.opts );
         self.eval( command ).map( |name| Photo{ name, inst: self.inst })
     }
 

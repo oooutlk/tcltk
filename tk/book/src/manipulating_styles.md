@@ -63,7 +63,7 @@ normal appearance:
   noted)
 
 * when the widget is in the state where the button is pressed, and the widget is
-  not disabled, the relief should be set to `sunken` 
+  not disabled, the relief should be set to `sunken`
 
 ```rust,no_run
 tbutton_style.map(

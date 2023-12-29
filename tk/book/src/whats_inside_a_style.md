@@ -16,7 +16,7 @@ That's one element. Just inside that, there may be a focus ring. Normally, it's
 just the background color, but could be highlighted when a user tabs into the
 button. So that's a second element. Then there might be some spacing between
 that focus ring and the button's label. That spacing is a third element.
-Finally, the text label of the button itself is a forth element. 
+Finally, the text label of the button itself is a forth element.
 
 | ![Possible elements of a button.](./images/button_elements.png) |
 | :-------------------------------------------------------------: |

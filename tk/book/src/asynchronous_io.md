@@ -16,4 +16,4 @@ back to the event loop. Later on, when the I/O operation completes, your program
 is notified and can process the result of the I/O operation.
 
 If this sounds like treating I/O as another type of event, you're exactly right.
-In fact, it's also called event-driven I/O. 
+In fact, it's also called event-driven I/O.

@@ -16,7 +16,7 @@ use std::{
     str::FromStr,
 };
 
-#[derive( Debug )]
+#[derive( Copy, Clone, Debug, PartialEq, Eq )]
 pub enum TkColor<'a> {
     Name( &'a str ),
     RGB(  TkRGB   ),
@@ -31,12 +31,13 @@ impl<'a> From<TkColor<'a>> for Obj {
     }
 }
 
-#[derive( Debug )]
+#[derive( Clone, Debug )]
 pub struct TkHandler {
     pub name    : String,
     pub command : Obj,
 }
 
+#[derive( Copy, Clone, Debug, PartialEq )]
 pub enum TkDistance {
     Pixels(        c_double ),
     Centimeters(   c_double ),
@@ -63,7 +64,7 @@ impl From<TkDistance> for Obj {
     }
 }
 
-#[derive( Debug )]
+#[derive( Copy, Clone, Default, Debug, PartialEq, Eq )]
 pub struct TkBBox {
     pub x : c_int,
     pub y : c_int,
@@ -71,17 +72,19 @@ pub struct TkBBox {
     pub h : c_int,
 }
 
-#[derive( Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Clone, Copy, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub struct TkCaret {
-    #[serde( rename = "-x"      )] x      : c_int,
-    #[serde( rename = "-y"      )] y      : c_int,
-    #[serde( rename = "-height" )] height : c_int,
+    #[serde( rename = "-x"      )] pub x      : c_int,
+    #[serde( rename = "-y"      )] pub y      : c_int,
+    #[serde( rename = "-height" )] pub height : c_int,
 }
 
-#[derive( Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Clone, Copy, Debug, Default, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub struct TkCoord {
-    x: c_int,
-    y: c_int,
+    pub x: c_int,
+    pub y: c_int,
 }
 
 impl TkCoord {
@@ -94,14 +97,16 @@ impl TkCoord {
     }
 }
 
-#[derive( Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Default, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub struct TkDLine {
     #[serde( flatten )]
     geometry : TkGeometry,
     baseline : c_int,
 }
 
-#[derive( Default, Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Default, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub struct TkGeometry {
     pub w : c_int,
     pub h : c_int,
@@ -156,7 +161,8 @@ impl From<TkGeometry> for Obj {
     }
 }
 
-#[derive( Copy, Clone, Default, Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Default, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub struct TkRGB( pub u16, pub u16, pub u16 );
 
 impl From<TkRGB> for Obj {
@@ -165,7 +171,7 @@ impl From<TkRGB> for Obj {
     }
 }
 
-#[derive( Debug )]
+#[derive( Copy, Clone, Default, Debug, PartialEq, Eq )]
 pub struct TkRectangle {
     pub left    : c_int,
     pub top     : c_int,
@@ -173,13 +179,13 @@ pub struct TkRectangle {
     pub bottom  : c_int,
 }
 
-#[derive( Debug )]
+#[derive( Copy, Clone, Default, Debug, PartialEq, Eq )]
 pub struct TkResizable {
     pub width  : bool,
     pub height : bool,
 }
 
-#[derive( Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize )]
 pub enum TkRequester {
     #[serde( rename = "program" )] Program,
     #[serde( rename = "user"    )] User,
@@ -194,7 +200,7 @@ impl From<TkRequester> for Obj {
     }
 }
 
-#[derive( Debug )]
+#[derive( Clone, Debug, PartialEq, Eq )]
 pub struct TkScreenName {
     pub display_name: String,
     pub screen_index: u32,
@@ -214,13 +220,14 @@ impl FromStr for TkScreenName {
     }
 }
 
-#[derive( Debug )]
+#[derive( Copy, Clone, Default, Debug, PartialEq, Eq )]
 pub struct TkSize {
     pub width  : c_int,
     pub height : c_int,
 }
 
-#[derive( Copy, Clone, Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub enum TkState {
     #[serde( rename = "normal" )]    Normal,
     #[serde( rename = "iconic" )]    Iconic,
@@ -243,7 +250,8 @@ impl From<TkState> for Obj {
     }
 }
 
-#[derive( Copy, Clone, Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub enum TkVisualClass {
     #[serde( rename = "directcolor" )] DirectColor,
     #[serde( rename = "grayscale"   )] GrayScale,
@@ -266,7 +274,8 @@ impl Display for TkVisualClass {
     }
 }
 
-#[derive( Copy, Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub enum TkWindowingSystem {
     #[serde( rename = "x11"   )] X11,
     #[serde( rename = "win32" )] Win32,
@@ -283,6 +292,7 @@ impl Display for TkWindowingSystem {
     }
 }
 
+#[derive( Clone, Debug, PartialEq, Eq )]
 pub enum TtkInsertPos {
     Num( c_int ),
     Name( String ),
@@ -299,7 +309,8 @@ impl From<TtkInsertPos> for Obj {
     }
 }
 
-#[derive( Debug, serde::Serialize, serde::Deserialize )]
+#[derive( Copy, Clone, Debug, PartialEq, Eq )]
+#[derive( serde::Serialize, serde::Deserialize )]
 pub enum TtkTreeviewRegion {
     #[serde( rename = "heading"   )] Heading,
     #[serde( rename = "separator" )] Separator,

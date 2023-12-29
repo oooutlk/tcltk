@@ -39,4 +39,4 @@ models that allow for blocking code, runs the GUI and event handlers in separate
 threads from application code, etc. Attempting to shoehorn these models into Tk
 can be a recipe for frustration and lead to fragile and hacky code. If you
 respect Tk's model rather than try to fight with it, you won't run into
-problems. 
+problems.

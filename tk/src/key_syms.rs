@@ -1625,8 +1625,6 @@ pub enum TkKey {
     XF86AudioPreset             ,   //269025206 0x1008FFB6
     XF86RotationLockToggle      ,   //269025207 0x1008FFB7
     XF86FullScreen              ,   //269025208 0x1008FFB8
-
-
 }
 
 pub struct InvalidKeySym( char );

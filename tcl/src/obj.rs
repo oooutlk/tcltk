@@ -432,6 +432,21 @@ impl From<char> for Obj {
     }
 }
 
+impl TryFrom<Obj> for char {
+    type Error = DeError;
+
+    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
+        let s = obj.to_string();
+        let mut chars = s.chars();
+        if let Some( ch ) = chars.next() {
+            if chars.next().is_none() {
+                return Ok( ch );
+            }
+        }
+        Err( DeError::new( DeKind::NotChar, obj.clone() ))
+    }
+}
+
 impl<'a> From<&'a str> for Obj {
     fn from( s: &'a str ) -> Obj {
         crate::init();

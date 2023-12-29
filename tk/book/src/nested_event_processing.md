@@ -31,7 +31,7 @@ reality won't match with your mental model of a simple event loop dispatching
 events one at a time, independent of every other event. It's a classic example
 of fighting against Tk's model. In very specific circumstances, it's possible to
 make it work. In practice, you're asking for trouble. Don't say you haven't been
-warned... 
+warned...
 
 |     Nested event loops... this way madness lies      |
 | :--------------------------------------------------: |

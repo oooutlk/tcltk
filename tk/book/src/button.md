@@ -53,7 +53,7 @@ let button = parent
 
 parent.bind(
     event::key_press( TkKey::Return ),
-    tclosure!( tk, move || -> InterpResult<Obj> { button.invoke() })
+    tclosure!( tk, || -> InterpResult<Obj> { button.invoke() })
 )?;
 ```
 

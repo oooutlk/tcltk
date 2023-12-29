@@ -29,25 +29,28 @@ pub use tcl::{
     },
 };
 
-pub struct TagRangesNotInPair( pub Obj );
-impl_std_error!{ TagRangesNotInPair }
-
-impl Debug for TagRangesNotInPair {
-    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
-        write!( formatter,
-            "`pathName text tag ranges tagName` should return an even-length list, but returns {}.",
-            self.0.to_string() )
-    }
+macro_rules! impl_std_error_and_debug {
+    ($err:ident, $msg:expr $(, $ty:expr)* ) => {
+        impl_std_error!{ $err }
+        impl Debug for $err {
+            fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
+                write!( formatter, $msg, self.0.to_string() $(,$ty)* )
+            }
+        }
+    };
 }
+
+pub struct TagRangesNotInPair( pub Obj );
+impl_std_error_and_debug!( TagRangesNotInPair,
+    "`pathName text tag ranges tagName` should return an even-length list, but returns {}." );
 
 pub struct TkAcceptableSizeParseError( pub Obj );
-impl_std_error!{ TkAcceptableSizeParseError }
+impl_std_error_and_debug!( TkAcceptableSizeParseError,
+    "error occurred when parsing {} as {}", "TkAcceptableSize" );
 
-impl Debug for TkAcceptableSizeParseError {
-    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
-        write!( formatter, "error occurred when parsing {} as TkAcceptableSize", self.0.to_string() )
-    }
-}
+pub struct TkButtonNoError( pub Obj );
+impl_std_error_and_debug!( TkButtonNoError,
+    "error occurred when converting {} as {}", "ButtonNo" );
 
 pub enum TkCanvasItemTypeParseError{}
 impl_std_error!{ TkCanvasItemTypeParseError }
@@ -59,13 +62,12 @@ impl Debug for TkCanvasItemTypeParseError {
 }
 
 pub struct TkDumpParseError( pub Obj );
-impl_std_error!{ TkDumpParseError }
+impl_std_error_and_debug!( TkDumpParseError,
+    "error occurred when parsing {} as {}", "TkDump" );
 
-impl Debug for TkDumpParseError {
-    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
-        write!( formatter, "error occurred when parsing {} as TkDump", self.0.to_string() )
-    }
-}
+pub struct TkEventTypeError( pub Obj );
+impl_std_error_and_debug!( TkEventTypeError,
+    "error occurred when converting {} as {}", "TkEventType" );
 
 #[derive( Debug )]
 pub struct TkGeometryParseError( pub String );
@@ -75,18 +77,21 @@ impl_std_error!{ TkGeometryParseError }
 pub struct TkIndexParseError( pub String );
 impl_std_error!{ TkIndexParseError }
 
+pub struct TkNotifyModeParseError( pub Obj );
+impl_std_error_and_debug!( TkNotifyModeParseError,
+    "error occurred when converting {} as {}", "TkNotifyMode" );
+
+pub struct TkPlaceOnParseError( pub Obj );
+impl_std_error_and_debug!( TkPlaceOnParseError,
+    "error occurred when converting {} as {}", "TkPlaceOn" );
+
 #[derive( Debug )]
 pub struct TkRequesterParseError( pub String );
 impl_std_error!{ TkRequesterParseError }
 
 pub struct TkResizableParseError( pub Obj );
-impl_std_error!{ TkResizableParseError }
-
-impl Debug for TkResizableParseError {
-    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
-        write!( formatter, "error occurred when parsing {} as TkResizable", self.0.to_string() )
-    }
-}
+impl_std_error_and_debug!( TkResizableParseError,
+    "error occurred when parsing {} as {}", "TkResizable" );
 
 #[derive( Debug )]
 pub struct TkScalePartParseError( pub String );
@@ -99,6 +104,18 @@ impl_std_error!{ TkScreenNameParseError }
 #[derive( Debug )]
 pub struct TkTextMarkGravityParseError( pub String );
 impl_std_error!{ TkTextMarkGravityParseError }
+
+pub struct TkValidatingActionError( pub Obj );
+impl_std_error_and_debug!( TkValidatingActionError,
+    "error occurred when converting {} as {}", "TkValidatingAction" );
+
+pub struct TkValidationSetParseError( pub Obj );
+impl_std_error_and_debug!( TkValidationSetParseError,
+    "error occurred when converting {} as {}", "TkValidationSet" );
+
+pub struct TkValidationOpParseError( pub Obj );
+impl_std_error_and_debug!( TkValidationOpParseError,
+    "error occurred when converting {} as {}", "TkValidationOp" );
 
 #[derive( Debug )]
 pub struct TkScrollbarElementParseError( pub String );
@@ -129,10 +146,14 @@ crate_error!{
     pub enum TkError {
         TagRangesNotInPair                      ,
         TkAcceptableSizeParseError              ,
+        TkButtonNoError                         ,
         TkCanvasItemTypeParseError              ,
         TkDumpParseError                        ,
+        TkEventTypeError                        ,
         TkGeometryParseError                    ,
         TkIndexParseError                       ,
+        TkNotifyModeParseError                  ,
+        TkPlaceOnParseError                     ,
         TkRequesterParseError                   ,
         TkResizableParseError                   ,
         TkScalePartParseError                   ,
@@ -140,6 +161,9 @@ crate_error!{
         TkSpinboxElementParseError              ,
         TkScreenNameParseError                  ,
         TkTextMarkGravityParseError             ,
+        TkValidatingActionError                 ,
+        TkValidationSetParseError               ,
+        TkValidationOpParseError         ,
         TtkStateParseError                      ,
         UnexpectedPanedwindowIdentifyResult     ,
         UnexpectedScrollbarElementActivatedError,

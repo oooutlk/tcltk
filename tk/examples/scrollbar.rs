@@ -16,11 +16,11 @@ fn main() -> TkResult<()> {
     let s = root.add_ttk_scrollbar( "s"
             -orient("vertical")
             -command( tclosure!( tk,
-                move |..| -> TkResult<()> { Ok( l.yview_( tcl_va_args!() )? )})))?
+                |..| -> TkResult<()> { Ok( l.yview_( tcl_va_args!() )? )})))?
         .grid( -column(1) -row(0) -sticky("ns") )?;
 
     l.configure( -yscrollcommand( tclosure!( tk,
-        move |first:c_double, last:c_double| -> TkResult<()> { Ok( s.set( first, last )? )})))?;
+        |first:c_double, last:c_double| -> TkResult<()> { Ok( s.set( first, last )? )})))?;
 
     root.add_ttk_label( "stat" -text("Status message here") -anchor("w") )?
         .grid( -column(0) -columnspan(2) -row(1) -sticky("we") )?;

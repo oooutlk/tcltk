@@ -77,19 +77,19 @@ fn main() -> TkResult<()> {
 
     // The following example provides for the following variations from a button's
     // normal appearance:
-    // 
+    //
     // * when the widget is in the disabled state, the background color should be set
     //   to `#d9d9d9`
-    // 
+    //
     // * when the widget is in the active state (mouse over it), the background color
     //   should be set to `#ececec`
-    // 
+    //
     // * when the widget is in the disabled state, the foreground color should be set
     //   to `#a3a3a3` (this is in addition to the background color change we already
     //   noted)
-    // 
+    //
     // * when the widget is in the state where the button is pressed, and the widget is
-    //   not disabled, the relief should be set to `sunken` 
+    //   not disabled, the relief should be set to `sunken`
     tbutton_style.map(
         -background([ "disabled", "#d9d9d9", "active", "#ececec" ].as_slice())
         -foreground([ "disabled", "#a3a3a3" ].as_slice())

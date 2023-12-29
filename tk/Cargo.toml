@@ -1,12 +1,13 @@
 [package]
 name = "tk"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
 keywords = [ "gui", "tcl", "tk", "binding" ]
 repository = "https://github.com/oooutlk/tcltk"
 homepage = "https://oooutlk.github.io/tk/"
+readme = "README.md"
 categories = [ "gui", "api-bindings" ]
 description = "Rust bindings for Tk GUI library"
 
@@ -17,12 +18,13 @@ cex = "0.5"
 clib = "0.2.4"
 heredom = "0.1"
 serde = { version = "1.0", features=["derive"] }
-tcl = { path = "../tcl", version = "0.1.7" }
-tcl_derive = { path = "../tcl_derive", version = "0.1.3" }
+tcl = { path = "../tcl", version = "0.1.8" }
+tcl_derive = { path = "../tcl_derive", version = "0.1.4" }
 tuplex = "0.1"
 strum = "0.19"
 strum_macros = "0.19"
 once_cell = "1.17.1"
+num_enum = "0.7.1"
 
 [build-dependencies]
 inwelling = "0.5"
@@ -41,7 +43,7 @@ cex_enum32 = ["cex/enum32", "tcl/cex_enum32"]
 build = ["tk86"]
 
 [package.metadata.inwelling.clib.spec.tk86]
-pc-alias = ["tk"]
+pc-alias = ["tk","tk8.6"]
 headers = ["tk.h"]
 dependencies = ["tcl86"]
 header-dependencies = ["x11"]

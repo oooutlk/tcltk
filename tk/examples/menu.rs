@@ -72,14 +72,14 @@ fn main() -> TkResult<()> {
     let m_edit = m.add_menu( "edit" )?;
     m.add_cascade( -menu(m_edit) -label("Edit") )?;
     m_edit.add_command( -label("Paste")
-        -command( tclosure!( tk, move || -> TkResult<()> {
+        -command( tclosure!( tk, || -> TkResult<()> {
             Ok( tk.focus()?.event_generate( event::virtual_event("Paste"), () )? )})))?;
     m_edit.add_command( -label("Find...")
-        -command( tclosure!( tk, move || -> TkResult<()> {
+        -command( tclosure!( tk, || -> TkResult<()> {
             Ok( root.event_generate( event::virtual_event("OpenFindDialog"), () )? )})))?;
     root.configure( -menu(m) )?;
- 
-    root.bind( event::virtual_event("OpenFindDialog"), tclosure!( tk, move || -> TkResult<String> {
+
+    root.bind( event::virtual_event("OpenFindDialog"), tclosure!( tk, || -> TkResult<String> {
         Ok( tk.message_box( -message("I hope you find what you're looking for!") )? )
     }))?;
 

@@ -31,7 +31,7 @@ option. We saw this in the example with the `command` option of the button.
 #[proc] fn calculate() { /* omitted */ }
 
 content.add_ttk_button( ".c.calc" -text("Calculate") -command("calculate") )?;
-``` 
+```
 
 ## Binding to Events
 
@@ -54,21 +54,19 @@ fn main() -> TkResult<()> {
 
     let l = tk.root().add_ttk_label( "l" -text("Starting...") )?.grid(())?;
 
-    l.bind( event::enter(), tclosure!( tk, move || l.configure( -text("Moved mouse inside") )))?;
+    l.bind( event::enter(), tclosure!( tk, || l.configure( -text("Moved mouse inside") )))?;
 
-    l.bind( event::leave(), tclosure!( tk, move || l.configure( -text("Moved mouse outside") )))?;
+    l.bind( event::leave(), tclosure!( tk, || l.configure( -text("Moved mouse outside") )))?;
 
-    l.bind( event::button_press_1(), tclosure!( tk, move || l.configure( -text("Clicked left mouse button") )))?;
+    l.bind( event::button_press_1(), tclosure!( tk, || l.configure( -text("Clicked left mouse button") )))?;
 
-    l.bind( event::button_press_3(), tclosure!( tk, move || l.configure( -text("Clicked right mouse button") )))?;
+    l.bind( event::button_press_3(), tclosure!( tk, || l.configure( -text("Clicked right mouse button") )))?;
 
-    l.bind( event::double().button_press_1(), tclosure!( tk, move || l.configure( -text("Double clicked") )))?;
+    l.bind( event::double().button_press_1(), tclosure!( tk, || l.configure( -text("Double clicked") )))?;
 
-    l.bind( event::button_3().motion(), tclosure!( tk, args: "%x %y hello",
-        move |x: i32, y: i32, _z: Obj| -> TkResult<()> {
-            Ok( l.configure( -text( format!( "right button drag to {} {}", x, y )))? )
-        }
-    ))?;
+    l.bind( event::button_3().motion(), tclosure!( tk, |evt_rootx, evt_rooty| -> TkResult<()> {
+        Ok( l.configure( -text( format!( "right button drag to {evt_rootx} {evt_rooty}" )))? )
+    }))?;
 
     Ok( main_loop() )
 }
