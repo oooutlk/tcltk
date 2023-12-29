@@ -26,7 +26,7 @@ inwelling = "0.5"
 build = ["tcl86"]
 
 [package.metadata.inwelling.clib.spec.tcl86]
-pc-alias = ["tcl"]
+pc-alias = ["tcl","tcl8.6"]
 headers = ["tcl.h"]
 exe = ["tclsh86", "tclsh"]
 includedir = ["tcl8.6", "tcl"]

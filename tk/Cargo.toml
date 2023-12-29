@@ -41,7 +41,7 @@ cex_enum32 = ["cex/enum32", "tcl/cex_enum32"]
 build = ["tk86"]
 
 [package.metadata.inwelling.clib.spec.tk86]
-pc-alias = ["tk"]
+pc-alias = ["tk","tk8.6"]
 headers = ["tk.h"]
 dependencies = ["tcl86"]
 header-dependencies = ["x11"]
