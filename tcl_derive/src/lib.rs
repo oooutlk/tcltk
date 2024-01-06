@@ -609,47 +609,15 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
 
     let args = args.unwrap_or_else( || parse_quote!( "" ));
 
-    let expanded = if default_values.is_empty() {
-        let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
-        let name = cmd.unwrap_or( parse_quote! { &format!( "__tcl_fn_{}", stringify!( #uuid ))});
+    let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
+    let cmd = cmd.unwrap_or_else( || parse_quote!{ &format!( "__tcl_fn_{}", stringify!( #uuid ))});
 
-        quote! {{
-            extern "C" fn #uuid( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
-                let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
-                match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
-                    Ok( value ) => {
-                        unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
-                        tcl::reexport_clib::TCL_OK as std::os::raw::c_int
-                    },
-                    Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
-                }
-            }
-
-            extern "C" fn __deleter( __client_data: tcl::reexport_clib::ClientData ) {
-                let _: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
-            }
-
-            fn __box_new_static_closure<F>( f: F ) -> Box<F>
-                where F: 'static + Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> #output
-            {
-                Box::new( f )
-            }
-
-            let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
-                #(#attrs)*
-                #[allow( unused_macros )]
-                #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
-            ));
-            let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
-
-            let name = #name;
-            unsafe{ (#interp).def_proc_with_client_data( name, #uuid, client_data, Some( __deleter )); }
-            format!( "{} {}", name, #args )
-        }}
+    let proc_definition: Vec<Stmt> = if default_values.is_empty() {
+        parse_quote!{
+             (#interp).def_proc_with_client_data( cmd, #uuid, client_data, Some( __deleter ));
+        }
     } else {
-        let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
         let name: Expr = parse_quote!{ &format!( "__tcl_fn_{}", stringify!( #uuid ))};
-        let cmd = cmd.unwrap_or_else( || parse_quote!{ &format!( "__tcl_fn_with_optional_args{}", stringify!( #uuid ))});
 
         let optional_argc = default_values.len();
         let required_argc = argc - optional_argc;
@@ -662,47 +630,47 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
         );
         let params = (0..argc).fold( String::new(), |acc,n| format!( "{acc} $arg{n}" ));
 
-        quote! {{
-            extern "C" fn #uuid( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
-                let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
-                match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
-                    Ok( value ) => {
-                        unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
-                        tcl::reexport_clib::TCL_OK as std::os::raw::c_int
-                    },
-                    Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
-                }
-            }
-
-            extern "C" fn __deleter( __client_data: tcl::reexport_clib::ClientData ) {
-                let _: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
-            }
-
-            fn __box_new_static_closure<F>( f: F ) -> Box<F>
-                where F: 'static + Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> #output
-            {
-                Box::new( f )
-            }
-
-            let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
-                #(#attrs)*
-                #[allow( unused_macros )]
-                #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
-            ));
-            let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
-
-            let cmd = #cmd;
-
-            unsafe {
-                (#interp).def_proc_with_client_data( #name, #uuid, client_data, Some( __deleter ));
-                (#interp).run(
-                    format!( "proc {} {{ {} }} {{ {} {} }}", cmd, #param_list, #name, #params )
-                ).ok();
-
-                format!( "{} {}", cmd, #args )
-            }
-        }}
+        parse_quote!{
+            (#interp).def_proc_with_client_data( #name, #uuid, client_data, Some( __deleter ));
+            (#interp).run(
+                format!( "proc {} {{ {} }} {{ {} {} }}", cmd, #param_list, #name, #params )
+            ).ok();
+        }
     };
+
+    let expanded = quote!{{
+        extern "C" fn #uuid( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
+            let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
+            match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
+                Ok( value ) => {
+                    unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
+                    tcl::reexport_clib::TCL_OK as std::os::raw::c_int
+                },
+                Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
+            }
+        }
+
+        extern "C" fn __deleter( __client_data: tcl::reexport_clib::ClientData ) {
+            let _: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = unsafe{ Box::from_raw( __client_data as *mut _ )};
+        }
+
+        fn __box_new_static_closure<F>( f: F ) -> Box<F>
+            where F: 'static + Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj ) -> #output
+        {
+            Box::new( f )
+        }
+
+        let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
+            #(#attrs)*
+            #[allow( unused_macros )]
+            #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
+        ));
+        let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
+
+        let cmd = #cmd;
+        unsafe{ #(#proc_definition)* }
+        format!( "{} {}", cmd, #args )
+    }};
 
     expanded.into()
 }
