@@ -610,11 +610,11 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
     let args = args.unwrap_or_else( || parse_quote!( "" ));
 
     let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
-    let cmd = cmd.unwrap_or_else( || parse_quote!{ &format!( "__tcl_fn_{}", stringify!( #uuid ))});
+    let cmd = cmd.unwrap_or_else( || parse_quote!("") );
 
     let proc_definition: Vec<Stmt> = if default_values.is_empty() {
         parse_quote!{
-             (#interp).def_proc_with_client_data( cmd, #uuid, client_data, Some( __deleter ));
+             (#interp).def_proc_with_client_data( cmd.as_str(), #uuid, client_data, Some( __deleter ));
         }
     } else {
         let name: Expr = parse_quote!{ &format!( "__tcl_fn_{}", stringify!( #uuid ))};
@@ -665,9 +665,16 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
             #[allow( unused_macros )]
             #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
         ));
+
         let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
 
-        let cmd = #cmd;
+        let address_as_name = format!( "__tclosure_at_{:?}", client_data );
+        let cmd = if #cmd.is_empty() {
+            address_as_name
+        } else {
+            String::from( #cmd )
+        };
+
         unsafe{ #(#proc_definition)* }
         format!( "{} {}", cmd, #args )
     }};
