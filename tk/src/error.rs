@@ -49,6 +49,15 @@ impl Debug for TkAcceptableSizeParseError {
     }
 }
 
+pub struct TkButtonNoError( pub Obj );
+impl_std_error!{ TkButtonNoError }
+
+impl Debug for TkButtonNoError {
+    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
+        write!( formatter, "error occurred when converting {} as ButtonNo", self.0.to_string() )
+    }
+}
+
 pub enum TkCanvasItemTypeParseError{}
 impl_std_error!{ TkCanvasItemTypeParseError }
 
@@ -67,6 +76,15 @@ impl Debug for TkDumpParseError {
     }
 }
 
+pub struct TkEventTypeError( pub Obj );
+impl_std_error!{ TkEventTypeError }
+
+impl Debug for TkEventTypeError {
+    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
+        write!( formatter, "error occurred when converting {} as TkEventType", self.0.to_string() )
+    }
+}
+
 #[derive( Debug )]
 pub struct TkGeometryParseError( pub String );
 impl_std_error!{ TkGeometryParseError }
@@ -74,6 +92,24 @@ impl_std_error!{ TkGeometryParseError }
 #[derive( Debug, Default )]
 pub struct TkIndexParseError( pub String );
 impl_std_error!{ TkIndexParseError }
+
+pub struct TkNotifyModeParseError( pub Obj );
+impl_std_error!{ TkNotifyModeParseError }
+
+impl Debug for TkNotifyModeParseError {
+    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
+        write!( formatter, "error occurred when converting {} as TkNotifyMode", self.0.to_string() )
+    }
+}
+
+pub struct TkPlaceOnParseError( pub Obj );
+impl_std_error!{ TkPlaceOnParseError }
+
+impl Debug for TkPlaceOnParseError {
+    fn fmt( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
+        write!( formatter, "error occurred when converting {} as TkPlaceOn", self.0.to_string() )
+    }
+}
 
 #[derive( Debug )]
 pub struct TkRequesterParseError( pub String );
@@ -129,10 +165,14 @@ crate_error!{
     pub enum TkError {
         TagRangesNotInPair                      ,
         TkAcceptableSizeParseError              ,
+        TkButtonNoError                         ,
         TkCanvasItemTypeParseError              ,
         TkDumpParseError                        ,
+        TkEventTypeError                        ,
         TkGeometryParseError                    ,
         TkIndexParseError                       ,
+        TkNotifyModeParseError                  ,
+        TkPlaceOnParseError                     ,
         TkRequesterParseError                   ,
         TkResizableParseError                   ,
         TkScalePartParseError                   ,

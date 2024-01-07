@@ -2,12 +2,20 @@ use crate::*;
 
 use crate::{
     cmd::append_opts,
-    error::NotList,
+    error::{
+        NotList,
+        TkButtonNoError,
+        TkEventTypeError,
+        TkNotifyModeParseError,
+        TkPlaceOnParseError,
+    },
     opt::{
         OptPair,
         TkEventOpt,
     },
 };
+
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use tcl::Obj;
 
@@ -399,5 +407,127 @@ impl<Inst:TkInstance> Widget<Inst> {
         append_opts( &mut command, opts.into().opts );
 
         self.tk().run( command )
+    }
+}
+
+#[derive( Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive )]
+#[repr( i32 )]
+pub enum ButtonNo {
+    Button1 = 1,
+    Button2 = 2,
+    Button3 = 3,
+    Button4 = 4,
+    Button5 = 5,
+}
+
+impl From<ButtonNo> for Obj {
+    fn from( button_no: ButtonNo ) -> Obj {
+        i32::from( button_no ).into()
+    }
+}
+
+impl TryFrom<Obj> for ButtonNo {
+    type Error = TkButtonNoError;
+    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
+        Self::try_from(
+            i32::try_from( obj.clone() )
+                .map_err( |_| TkButtonNoError( obj.clone() ))? )
+            .map_err( |_| TkButtonNoError( obj ))
+    }
+}
+
+
+#[derive( Debug, strum_macros::Display, strum_macros::EnumString )]
+pub enum TkNotifyMode {
+    NotifyNormal,
+    NotifyGrab,
+    NotifyUngrab,
+    NotifyWhileGrabbed
+}
+
+impl From<TkNotifyMode> for Obj {
+    fn from( notify_mode: TkNotifyMode ) -> Obj {
+        notify_mode.to_string().into()
+    }
+}
+
+impl TryFrom<Obj> for TkNotifyMode {
+    type Error = TkNotifyModeParseError;
+    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
+        obj.get_string().parse().map_err( |_| TkNotifyModeParseError( obj.clone() ))
+    }
+}
+
+#[derive( Debug, strum_macros::Display, strum_macros::EnumString )]
+pub enum TkPlaceOn {
+    PlaceOnTop,
+    PlaceOnBottom,
+}
+
+impl From<TkPlaceOn> for Obj {
+    fn from( place_on: TkPlaceOn ) -> Obj {
+        place_on.to_string().into()
+    }
+}
+
+impl TryFrom<Obj> for TkPlaceOn {
+    type Error = TkPlaceOnParseError;
+    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
+        obj.get_string().parse().map_err( |_| TkPlaceOnParseError( obj.clone() ))
+    }
+}
+
+#[derive( Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive )]
+#[repr( i32 )]
+pub enum TkEventType {
+    KeyPress            =  2,
+    KeyRelease          =  3,
+    ButtonPress         =  4,
+    ButtonRelease       =  5,
+    MotionNotify        =  6,
+    EnterNotify         =  7,
+    LeaveNotify         =  8,
+    FocusIn             =  9,
+    FocusOut            = 10,
+    KeymapNotify        = 11,
+    Expose              = 12,
+    GraphicsExpose      = 13,
+    NoExpose            = 14,
+    VisibilityNotify    = 15,
+    CreateNotify        = 16,
+    DestroyNotify       = 17,
+    UnmapNotify         = 18,
+    MapNotify           = 19,
+    MapRequest          = 20,
+    ReparentNotify      = 21,
+    ConfigureNotify     = 22,
+    ConfigureRequest    = 23,
+    GravityNotify       = 24,
+    ResizeRequest       = 25,
+    CirculateNotify     = 26,
+    CirculateRequest    = 27,
+    PropertyNotify      = 28,
+    SelectionClear      = 29,
+    SelectionRequest    = 30,
+    SelectionNotify     = 31,
+    ColormapNotify      = 32,
+    ClientMessage       = 33,
+    MappingNotify       = 34,
+    GenericEvent        = 35,
+}
+
+impl From<TkEventType> for Obj {
+    fn from( event_type: TkEventType ) -> Obj {
+        i32::from( event_type ).into()
+    }
+}
+
+impl TryFrom<Obj> for TkEventType {
+    type Error = TkEventTypeError;
+    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
+        Self::try_from(
+            i32::try_from( obj.clone() )
+                .map_err( |_| TkEventTypeError( obj.clone() ))? )
+            .map_err( |_| TkEventTypeError( obj ))
     }
 }
