@@ -3,5 +3,6 @@ members = [
     "tcl",
     "tcl_derive",
     "tk",
+    "tk_derive",
 ]
 resolver = "2"

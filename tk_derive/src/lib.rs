@@ -132,7 +132,7 @@ impl Parse for Bind {
             }
         }
 
-        panic!( "Invalid input for `bind!()`: {input:?}" );
+        panic!( "Invalid input for `tkbind!()`: {input:?}" );
     }
 }
 

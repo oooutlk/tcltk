@@ -669,81 +669,19 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
         let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
 
         let address_as_name = format!( "__tclosure_at_{:?}", client_data );
-        let cmd = if #cmd.is_empty() {
+        let cmd = if (#cmd).is_empty() {
             address_as_name
         } else {
             String::from( #cmd )
         };
 
         unsafe{ #(#proc_definition)* }
+
         format!( "{} {}", cmd, #args )
     }};
 
     expanded.into()
 }
-/*
-#[proc_macro]
-pub fn tkbind( input: TokenStream ) -> TokenStream {
-    struct TkbindInput {
-        tk      : Expr,
-        captures: Punctuated<Expr,Comma>,
-        closure : ExprClosure,
-    }
-    macro_rules! enclose_data {
-        [ *$a: expr => mut $b: ident,  $($tt:tt)*] => { // mut id = *expr
-            let mut $b = *$a;
-            $crate::enclose_data!{ $($tt)* }
-        };
-        [ $a: expr => mut $b: ident,  $($tt:tt)*] => {  // mut id = expr
-            let mut $b = $a.clone();
-            $crate::enclose_data!{ $($tt)* }
-        };
-        [ *$a: expr => $b: ident,  $($tt:tt)*] => {     // id = *expr
-            let $b = *$a;
-            $crate::enclose_data!{ $($tt)* }
-        };
-        [ $a: expr => $b: ident,  $($tt:tt)*] => {      // id = expr
-            let $b = $a.clone();
-            $crate::enclose_data!{ $($tt)* }
-        };
-        [ mut *$a: ident,  $($tt:tt)*] => {             // mut *id
-            let mut $a = *$a;
-            $crate::enclose_data!{ $($tt)* }
-        };
-        [ mut $a: ident,  $($tt:tt)*] => {              // mut id
-            let mut $a = $a.clone();
-            $crate::enclose_data!{ $($tt)* }
-        };
-        [ *$a: ident,  $($tt:tt)*] => {                 // *id
-            let $a = *$a;
-            $crate::enclose_data!{ $($tt)* }
-        };
-        [ $a: ident,  $($tt:tt)*] => {                  // id
-            let $a = $a.clone();
-            $crate::enclose_data!{ $($tt)* }
-        };
-    }
-
-    impl Parse for TkbindInput {
-        fn parse( input: ParseStream ) -> parse::Result<Self> {
-            let tk = input.parse::<Expr>()?;
-            input.parse::<Token![,]>()?;
-
-            let mut captures = Punctuated::<Expr,Comma>::new();
-            while !input.is_empty() {
-                if input.peek( Ident::peek_any )
-                    match input.parse::<Expr>()? {
-                        Expr::Path( _expr_path ) => (),
-                    }
-                input.parse::<Token![,]>()?;
-            }
-
-            let closure = input.parse::<ExprClosure>()?;
-            Ok( TkbindInput{ tk, captures, closure })
-        }
-    }
-
-}*/
 
 /// Derives `std::from::TryFrom<tcl::Obj>`, based on `serde::Deserialize`.
 #[proc_macro_derive( TryFromDe )]

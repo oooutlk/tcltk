@@ -140,6 +140,8 @@ pub(crate) use tcl::{
     },
 };
 
+pub use tk_derive::tkbind;
+
 #[macro_export]
 macro_rules! make_tk {
     () => { Tk::new( ||() ) }
