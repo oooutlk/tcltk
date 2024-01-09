@@ -1,0 +1,18 @@
+[package]
+name = "tk_derive"
+version = "0.1.0"
+authors = ["oooutlk <oooutlk@outlook.com>"]
+edition = "2021"
+license = "MIT/Apache-2.0"
+keywords = [ "tk", "tcl", "closure", "callback" ]
+repository = "https://github.com/oooutlk/tcltk"
+description = "Macros for tcl crate to register functions/closures as Tcl commands"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full","visit"] }
+uuid = { version = "0.8", features = ["v4"] }
