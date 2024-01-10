@@ -324,7 +324,7 @@ fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, item_fn: It
     expanded.into()
 }
 
-/// Helps to register rust functions as Tcl commands
+/// Helps to register rust functions as Tcl commands.
 ///
 /// # Syntax
 ///
@@ -399,7 +399,9 @@ pub fn tclfn( input: TokenStream ) -> TokenStream {
     callback_fn( interp, cmd, args, func )
 }
 
-/// Helps to register rust closures as Tcl commands
+/// Helps to register rust closures as Tcl commands.
+///
+/// See also `tk_derive::tkbind!()` for Tk callbacks.
 ///
 /// # Syntax
 ///

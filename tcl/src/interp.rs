@@ -15,6 +15,7 @@ use crate::{
 };
 
 use std::{
+    env,
     ffi::CString,
     mem,
     ops::Deref,
@@ -150,9 +151,23 @@ impl Interp {
 
     /// Executes the `code` until either an error occurs or the end of the script is reached.
     /// Additional options can be specified using flags `TCL_EVAL_GLOBAL` and `TCL_EVAL_DIRECT`.
+    ///
+    /// Set environment variable TCL_DISPLAY_RUNNING_COMMANDS to "stdout" or "stderr" to
+    /// check what commands are running.
     pub fn eval_with_flags( &self, code: impl Into<Obj>, flags: c_int ) -> Result<Obj> {
         let code = code.into();
-        #[cfg( debug_assertions )] println!( "{}", code );
+        #[cfg( debug_assertions )] {
+            for (name, value) in env::vars() {
+                if name == "TCL_DISPLAY_RUNNING_COMMANDS" {
+                    match value.as_str() {
+                        "stdout" =>  println!( "{code}" ),
+                        "stderr" => eprintln!( "{code}" ),
+                               _ => (),
+                    }
+                    break;
+                }
+            }
+        }
 
         unsafe {
             clib::Tcl_EvalObjEx( self.0.as_ptr(), code.as_ptr(), flags ).code_to_result( self )?;
@@ -163,6 +178,9 @@ impl Interp {
 
     /// Executes the `code` until either an error occurs or the end of the script is reached.
     /// Returns `()` on success.
+    ///
+    /// Set environment variable TCL_DISPLAY_RUNNING_COMMANDS to "stdout" or "stderr" to
+    /// check what commands are running.
     pub fn run( &self, code: impl Into<Obj> ) -> Result<()> {
         self.eval_with_flags( code, 0 )?;
         Ok(())
