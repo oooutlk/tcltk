@@ -13,14 +13,14 @@ Scrollbars are created using the `add_ttk_scrollbar` method:
 let s = parent
     .add_ttk_scrollbar( "s"
         -orient( "vertical" )
-        -command( tclosure!( tk,
+        -command( tkbind!( tk,
             move |..| -> TkResult<(c_double, c_double)> {
                 Ok( l.yview()? )
             }
         ))
     )?;
 
-l.configure( -yscrollcommand( tclosure!( tk,
+l.configure( -yscrollcommand( tkbind!( tk,
     move |first:c_double, last:c_double| -> TkResult<()> {
         Ok( s.set( first, last )? )
     }
@@ -91,12 +91,12 @@ fn main() -> TkResult<()> {
 
     let s = root.add_ttk_scrollbar( "s"
             -orient("vertical")
-            -command( tclosure!( tk,
-                move |..| -> TkResult<(c_double, c_double)> { Ok( l.yview()? )})))?
+            -command( tkbind!( tk,
+                |..| -> TkResult<()> { Ok( l.yview_( tcl_va_args!() )? )})))?
         .grid( -column(1) -row(0) -sticky("ns") )?;
 
-    l.configure( -yscrollcommand( tclosure!( tk,
-        move |first:c_double, last:c_double| -> TkResult<()> { Ok( s.set( first, last )? )})))?;
+    l.configure( -yscrollcommand( tkbind!( tk,
+        |first:c_double, last:c_double| -> TkResult<()> { Ok( s.set( first, last )? )})))?;
 
     root.add_ttk_label( "stat" -text("Status message here") -anchor("w") )?
         .grid( -column(0) -columnspan(2) -row(1) -sticky("we") )?;

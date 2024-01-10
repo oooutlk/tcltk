@@ -12,7 +12,7 @@ fn main() -> TkResult<()> {
     let tree = root.add_ttk_treeview(())?.pack(())?;
     tree.insert( "", Index::End, -text("button") -tags("ttk simple") )?;
     tree.tag_configure( "ttk", -background("yellow") )?;
-    let item_clicked = tclosure!( tk, move || -> TkResult<()> {
+    let item_clicked = tkbind!( tk, || {
         println!( "item clicked!" );
         Ok(())
     });

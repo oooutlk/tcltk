@@ -84,9 +84,9 @@ callback change the font on a label.
 let l = root
     .add_ttk_label( "l" -text("Hello World") -font("helvetica 24") )?
     .grid( -padx(10) -pady(10) )?;
-tclosure!( tk, cmd:"font_changed",
-    move |some_font:Obj| -> TkResult<()> { Ok( l.configure( -font(some_font) )? )});
-tk.fontchooser_configure( -font("helvetica 24") -command("font_changed") )?;
+let font_changed = tkbind!( tk,
+    |some_font:Obj| -> TkResult<()> { Ok( l.configure( -font(some_font) )? )});
+tk.fontchooser_configure( -font("helvetica 24") -command(font_changed) )?;
 ```
 
 > You can query or change the font that is (or will be) displayed in the dialog

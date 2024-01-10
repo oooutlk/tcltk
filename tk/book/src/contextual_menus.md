@@ -34,7 +34,6 @@ menu on the application's main window.
 ```rust,no_run
 // `cargo run --example contextual_menus`
 
-use std::ffi::c_int;
 use tcl::*;
 use tk::*;
 use tk::cmd::*;
@@ -48,9 +47,9 @@ fn main() -> TkResult<()> {
         menu.add_command( -label(i) )?;
     }
 
-    let handler = tclosure!( tk, cmd: "handler", args: "%X %Y",
-        move |x: c_int, y: c_int| -> TkResult<()> {
-            Ok( tk.popup( menu, x, y, None )? )
+    let handler = tkbind!( tk,
+        |evt_rootx, evt_rooty| -> TkResult<()> {
+            Ok( tk.popup( menu, evt_rootx, evt_rooty, None )? )
         }
     );
 

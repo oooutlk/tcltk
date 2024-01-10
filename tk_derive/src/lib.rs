@@ -56,15 +56,6 @@ impl Parse for TkbindInput {
     }
 }
 
-const INPUT_AS_EVENT_DETAILS: &'static str =
-    "tkbind!()'s closure inputs should describe tk event details.";
-
-const INPUT_IDENT_AS_EVENT_DETAILS: &'static str =
-    "tkbind!()'s closure inputs in the form of `name` should describe tk event details.";
-
-const INPUT_IDENT_TYPE_AS_EVENT_DETAILS: &'static str =
-    "tkbind!()'s closure inputs in the form of `name:type` should describe tk event details.";
-
 fn tk_event_detail_name_and_type( id: &Ident ) -> Option<(&'static str, Type)> {
     match id.to_string().as_str() {
         "evt_serial"         => Some((" %#", parse_quote!( std::ffi::c_int         ))),
@@ -108,6 +99,10 @@ fn id_of_pat( pat: &Pat ) -> Option<Ident> {
         _ => None,
     }
 }
+
+const BAD_INPUT: &'static str = "tkbind!()'s closure inputs should be `id` or `id:type`.";
+
+const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-event-arguments.";
 
 /// Helps to register rust closures as Tk commands, usually for event callbacks.
 ///
@@ -153,7 +148,6 @@ fn id_of_pat( pat: &Pat ) -> Option<Ident> {
 ///     Ok(())
 /// }))?;
 /// ```
-
 #[proc_macro]
 pub fn tkbind( input: TokenStream ) -> TokenStream {
     let TkbindInput{ tk, binds, mut closure } = parse_macro_input!( input as TkbindInput );
@@ -181,29 +175,33 @@ pub fn tkbind( input: TokenStream ) -> TokenStream {
     for pat in closure.inputs.iter_mut() {
         match pat {
             Pat::Type( pat_ty ) => match id_of_pat( &*pat_ty.pat ) {
-                Some( id ) => args.push_str(
-                    tk_event_detail_name_and_type( &id )
-                        .expect( &format!( "{INPUT_IDENT_TYPE_AS_EVENT_DETAILS}: {id}" )).0 ),
-                None => panic!( "{INPUT_IDENT_TYPE_AS_EVENT_DETAILS}" ),
+                Some( id ) => match tk_event_detail_name_and_type( &id ) {
+                    Some((name, _)) => args.push_str( name ),
+                    None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
+                }
+                None => panic!( "{BAD_INPUT}" ),
             }
             Pat::Ident( pat_ident ) => {
                 let ident = pat_ident.ident.clone();
-                let (name, ty) = tk_event_detail_name_and_type( &ident )
-                    .expect( &format!( "{INPUT_IDENT_AS_EVENT_DETAILS}: {ident}" ));
-                args.push_str( name );
-                *pat = Pat::Type( PatType {
-                    attrs       : vec![],
-                    pat         : Box::new( Pat::Ident( PatIdent{
-                        attrs       : vec![],
-                        by_ref      : None,
-                        mutability  : None,
-                        ident       ,
-                        subpat      : None, })),
-                    colon_token : token::Colon( Span::call_site() ),
-                    ty          : Box::new( ty ),
-                });
+                match tk_event_detail_name_and_type( &ident ) {
+                    Some((name, ty)) => {
+                        args.push_str( name );
+                        *pat = Pat::Type( PatType {
+                            attrs       : vec![],
+                            pat         : Box::new( Pat::Ident( PatIdent{
+                                attrs       : vec![],
+                                by_ref      : None,
+                                mutability  : None,
+                                ident       ,
+                                subpat      : None, })),
+                            colon_token : token::Colon( Span::call_site() ),
+                            ty          : Box::new( ty ),
+                        });
+                    }
+                    None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
+                }
             }
-            _ => panic!( "{INPUT_AS_EVENT_DETAILS}" ),
+            _ => panic!( "{BAD_INPUT}" ),
         }
     }
 

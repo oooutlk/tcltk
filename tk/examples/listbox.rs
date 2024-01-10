@@ -63,55 +63,6 @@ fn main() -> TkResult<()> {
     // The listbox is the only widget we'll need to refer to directly
     // later in our program, so for convenience we'll assign it to a variable.
     let lbox = c.add_listbox( "countries" -listvariable("countrynames") -height(5) )?;
-    c.add_ttk_label( "lbl" -text("Send to country's leader:") )?;
-    c.add_ttk_radiobutton( "g1" -text( tk.arr_get( "gifts", "card"      )? ) -variable("gift") -value("card") )?;
-    c.add_ttk_radiobutton( "g2" -text( tk.arr_get( "gifts", "flowers"   )? ) -variable("gift") -value("flowers") )?;
-    c.add_ttk_radiobutton( "g3" -text( tk.arr_get( "gifts", "nastygram" )? ) -variable("gift") -value("nastygram") )?;
-    c.add_ttk_button( "send"    -text("Send Gift") -command("send_gift") -default_("active") )?;
-    c.add_ttk_label(  "sentlbl" -textvariable("sentmsg")   -anchor("center") )?;
-    c.add_ttk_label(  "status"  -textvariable("statusmsg") -anchor("w") )?;
-
-    // Grid all the widgets
-    tk.grid( ".c.countries" -column(0) -row(0) -rowspan(6) -sticky("nsew") )?;
-    tk.grid( ".c.lbl"       -column(1) -row(0) -padx(10) -pady(5) )?;
-    tk.grid( ".c.g1"        -column(1) -row(1) -sticky("w") -padx(20) )?;
-    tk.grid( ".c.g2"        -column(1) -row(2) -sticky("w") -padx(20) )?;
-    tk.grid( ".c.g3"        -column(1) -row(3) -sticky("w") -padx(20) )?;
-    tk.grid( ".c.send"      -column(2) -row(4) -sticky("e") )?;
-    tk.grid( ".c.sentlbl"   -column(1) -row(5) -columnspan(2) -sticky("n") -pady(5) -padx(5) )?;
-    tk.grid( ".c.status"    -column(0) -row(6) -columnspan(2) -sticky("we") )?;
-    c.grid_columnconfigure( 0, -weight(1) )?;
-    c.grid_rowconfigure(    5, -weight(1) )?;
-
-    // Set event bindings for when the selection in the listbox changes,
-    // when the user double clicks the list, and when they hit the Return key
-    lbox.bind( event::virtual_event( "ListboxSelect" ), "show_population" )?;
-    lbox.bind( event::double().button_press_1(), "send_gift" )?;
-    root.bind( event::key_press( TkKey::Return ), "send_gift" )?;
-
-    // Called when the selection in the listbox changes; figure out
-    // which country is currently selected, and then lookup its country
-    // code, and from that, its population.  Update the status message
-    // with the new population.  As well, clear the message about the
-    // gift being sent, so it doesn't stick around after we start doing
-    // other things.
-    tclosure!( tk, cmd: "show_population", move || -> TkResult<()> {
-        let interp = tcl_interp!();
-        let idx = lbox.curselection()?;
-        if idx.len() == 1 {
-            let idx = idx[0];
-            let code = interp.get( "countrycodes" )?.list_index( idx )?
-                .map( |obj| obj.get_string() ).unwrap_or_default();
-            let name = interp.get( "countrynames" )?.list_index( idx )?
-                .map( |obj| obj.get_string() ).unwrap_or_default();
-            let popn = interp.get("populations")?.dict_get( code.clone() )?
-                .map( |obj| obj.get_string() ).unwrap_or_default();
-            interp.set( "statusmsg",
-                format!( "The population of {}({}) is {}", name, code, popn ));
-        }
-        interp.set( "sentmsg", "" );
-        Ok(())
-    });
 
     // Called when the user double clicks an item in the listbox, presses
     // the "Send Gift" button, or presses the Return key.  In case the selected
@@ -119,7 +70,7 @@ fn main() -> TkResult<()> {
     //
     // Figure out which country is selected, which gift is selected with the
     // radiobuttons, "send the gift", and provide feedback that it was sent.
-    tclosure!( tk, cmd: "send_gift", move || -> TkResult<()> {
+    let send_gift = tkbind!( tk, || -> TkResult<()> {
         let interp = tcl_interp!();
         let idx = lbox.curselection()?;
         if idx.len() == 1 {
@@ -139,6 +90,56 @@ fn main() -> TkResult<()> {
         Ok(())
     });
 
+    c.add_ttk_label( "lbl" -text("Send to country's leader:") )?;
+    c.add_ttk_radiobutton( "g1" -text( tk.arr_get( "gifts", "card"      )? ) -variable("gift") -value("card") )?;
+    c.add_ttk_radiobutton( "g2" -text( tk.arr_get( "gifts", "flowers"   )? ) -variable("gift") -value("flowers") )?;
+    c.add_ttk_radiobutton( "g3" -text( tk.arr_get( "gifts", "nastygram" )? ) -variable("gift") -value("nastygram") )?;
+    c.add_ttk_button( "send"    -text("Send Gift") -command(&*send_gift) -default_("active") )?;
+    c.add_ttk_label(  "sentlbl" -textvariable("sentmsg")   -anchor("center") )?;
+    c.add_ttk_label(  "status"  -textvariable("statusmsg") -anchor("w") )?;
+
+    // Grid all the widgets
+    tk.grid( ".c.countries" -column(0) -row(0) -rowspan(6) -sticky("nsew") )?;
+    tk.grid( ".c.lbl"       -column(1) -row(0) -padx(10) -pady(5) )?;
+    tk.grid( ".c.g1"        -column(1) -row(1) -sticky("w") -padx(20) )?;
+    tk.grid( ".c.g2"        -column(1) -row(2) -sticky("w") -padx(20) )?;
+    tk.grid( ".c.g3"        -column(1) -row(3) -sticky("w") -padx(20) )?;
+    tk.grid( ".c.send"      -column(2) -row(4) -sticky("e") )?;
+    tk.grid( ".c.sentlbl"   -column(1) -row(5) -columnspan(2) -sticky("n") -pady(5) -padx(5) )?;
+    tk.grid( ".c.status"    -column(0) -row(6) -columnspan(2) -sticky("we") )?;
+    c.grid_columnconfigure( 0, -weight(1) )?;
+    c.grid_rowconfigure(    5, -weight(1) )?;
+
+    // Called when the selection in the listbox changes; figure out
+    // which country is currently selected, and then lookup its country
+    // code, and from that, its population.  Update the status message
+    // with the new population.  As well, clear the message about the
+    // gift being sent, so it doesn't stick around after we start doing
+    // other things.
+    let show_population = tkbind!( tk, || -> TkResult<()> {
+        let interp = tcl_interp!();
+        let idx = lbox.curselection()?;
+        if idx.len() == 1 {
+            let idx = idx[0];
+            let code = interp.get( "countrycodes" )?.list_index( idx )?
+                .map( |obj| obj.get_string() ).unwrap_or_default();
+            let name = interp.get( "countrynames" )?.list_index( idx )?
+                .map( |obj| obj.get_string() ).unwrap_or_default();
+            let popn = interp.get("populations")?.dict_get( code.clone() )?
+                .map( |obj| obj.get_string() ).unwrap_or_default();
+            interp.set( "statusmsg",
+                format!( "The population of {}({}) is {}", name, code, popn ));
+        }
+        interp.set( "sentmsg", "" );
+        Ok(())
+    });
+
+    // Set event bindings for when the selection in the listbox changes,
+    // when the user double clicks the list, and when they hit the Return key
+    lbox.bind( event::virtual_event( "ListboxSelect" ), &*show_population )?;
+    lbox.bind( event::double().button_press_1(), &*send_gift )?;
+    root.bind( event::key_press( TkKey::Return ), &*send_gift )?;
+
     // Colorize alternating lines of the listbox
     let len = tk.get( "countrynames" )?.list_length()?;
     (0..len).step_by(2).try_for_each( |i| -> InterpResult<()> {
@@ -153,17 +154,17 @@ fn main() -> TkResult<()> {
     tk.set( "sentmsg", "" );
     tk.set( "statusmsg", "" );
     lbox.selection_set_range( 0.. )?;
-    tk.run( "show_population" )?;
+    tk.run( &*show_population )?;
 
     //
     //lbox.bind( event::virtual_event( "ListboxSelect" ),
-    //    tclosure!( tk, move || -> TkResult<()> {
+    //    tkbind!( tk, || -> TkResult<()> {
     //        Ok( update_details( lbox.curselection()? ))
     //    }
     //))?;
     //
     //lbox.bind( event::double().button_press_1(),
-    //    tclosure!( tk, move || -> TkResult<()> {
+    //    tkbind!( tk, || -> TkResult<()> {
     //        Ok( invoke_action( lbox.curselection()? ))
     //    }
     //))?;

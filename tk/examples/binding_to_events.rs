@@ -19,8 +19,8 @@ fn main() -> TkResult<()> {
 
     l.bind( event::double().button_press_1(), tkbind!( tk, || l.configure( -text("Double clicked") )))?;
 
-    l.bind( event::button_3().motion(), tkbind!( tk, |evt_x, evt_y| -> TkResult<()> {
-        Ok( l.configure( -text( format!( "right button drag to {evt_x} {evt_y}" )))? )
+    l.bind( event::button_3().motion(), tkbind!( tk, |evt_rootx, evt_rooty| -> TkResult<()> {
+        Ok( l.configure( -text( format!( "right button drag to {evt_rootx} {evt_rooty}" )))? )
     }))?;
 
     Ok( main_loop() )

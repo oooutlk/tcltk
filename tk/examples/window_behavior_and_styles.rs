@@ -24,7 +24,7 @@ fn main() -> TkResult<()> {
 
     window.winfo_reqwidth()?; // or reqheight
 
-    let callback = tclosure!( tk, || -> TkResult<()> { Ok(()) }); //dummy
+    let callback = tkbind!( tk, || -> TkResult<()> { Ok(()) }); //dummy
     unsafe { window.set_wm_protocol( "WM_DELETE_WINDOW", callback )?; }
 
     window.set_wm_attributes( -alpha(0.5) )?;
@@ -57,8 +57,8 @@ fn main() -> TkResult<()> {
         .grid( -column(0) -row(0) )?; 
     root.add_ttk_label( "bigger" -text("Much Bigger Label") )?
         .grid( -column(0) -row(0) )?;
-    tk.after( 2000, (tclosure!( tk,
-        move || -> TkResult<()> { Ok( little.raise()? )}),))?;
+    tk.after( 2000, (tkbind!( tk,
+        || -> TkResult<()> { Ok( little.raise()? )}),))?;
 
     println!( "color depth={} ({})", root.winfo_screendepth()?, root.winfo_screenvisual()? );
     println!( "pixels per inch={}", root.winfo_pixels( TkDistance::Inches(1.0) )? );

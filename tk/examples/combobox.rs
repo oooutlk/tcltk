@@ -9,8 +9,8 @@ fn main() -> TkResult<()> {
     let country = root.add_ttk_combobox( "country" -textvariable("country") )?
         .pack(())?;
 
-    let script = tclosure!( tk,
-        move || -> TkResult<()> { Ok( println!( "combobox {} item selected: {}", country.path(), country.get()? ))}
+    let script = tkbind!( tk,
+        || -> TkResult<()> { Ok( println!( "combobox {} item selected: {}", country.path(), country.get()? ))}
     );
 
     country.bind( event::virtual_event( "ComboboxSelected" ), script )?;
