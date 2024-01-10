@@ -33,7 +33,6 @@ use uuid::Uuid;
 
 struct TkbindInput {
     tk      : Expr,
-    cmd     : Option<Expr>,
     binds   : Option<Punctuated<Bind,Token![,]>>,
     closure : ExprClosure,
 }
@@ -42,14 +41,6 @@ impl Parse for TkbindInput {
     fn parse( input: ParseStream ) -> parse::Result<Self> {
         let tk = input.parse::<Expr>()?;
         input.parse::<Token![,]>()?;
-
-        let cmd;
-        if input.peek( token::Paren ) {
-            cmd = None;
-        } else {
-            cmd = Some( input.parse::<Expr>()? );
-            input.parse::<Token![,]>()?;
-        }
 
         let binds = if input.peek( token::Paren ) {
             let content;
@@ -61,7 +52,7 @@ impl Parse for TkbindInput {
 
         let closure = input.parse::<ExprClosure>()?;
 
-        Ok( TkbindInput{ tk, cmd, binds, closure })
+        Ok( TkbindInput{ tk, binds, closure })
     }
 }
 
@@ -118,10 +109,54 @@ fn id_of_pat( pat: &Pat ) -> Option<Ident> {
     }
 }
 
-/// Helps to register rust closures as Tk commands as event callbacks.
+/// Helps to register rust closures as Tk commands, usually for event callbacks.
+///
+/// # Syntax
+///
+/// 1. `tkbind!( tk, closure )`
+///
+/// 2. `tkbind!( tk, (colon-separated-binding-list), closure )`
+///
+/// # Input parameters
+///
+/// 1. tk, the Tk interpreter instance.
+///
+/// 2. binding list, for cloning data into the closure, which is similar inside `bind::bind!()`. Optional.
+///
+/// 3. closure, the closure defined in Rust. Its capture must be `move` and `move` keywords could be omitted.
+///   Note: an attribute `#[default(value)]` on a parameter will assign a default `value` for this parameter.
+///
+/// # Output
+///
+/// Returns a `String` of the command name.
+///
+/// To access to the command name inside the closure, use `tk.get("__self__")?`.
+///
+/// # Example, Event callback
+///
+/// ```rust,no_run
+/// widget.bind( button_press_2(),
+///     tkbind!( tk, |evt_x, evt_y| -> TkResult<()> {
+///         Ok( tk.popup( menu, evt_x, evt_y, None )? )
+///     })
+/// )?;
+/// ```
+///
+/// # Example, Poll
+///
+/// ```rust,no_run
+/// tk.run( tkbind!( tk, || {
+///     {/* poll and do lots of work, omitted */}
+///
+///     let this_cmd = tk.get("__self__")?;
+///     tk.after( 100, (this_cmd,) )?;
+///     Ok(())
+/// }))?;
+/// ```
+
 #[proc_macro]
 pub fn tkbind( input: TokenStream ) -> TokenStream {
-    let TkbindInput{ tk, cmd, binds, mut closure } = parse_macro_input!( input as TkbindInput );
+    let TkbindInput{ tk, binds, mut closure } = parse_macro_input!( input as TkbindInput );
     let binds = binds.unwrap_or_default();
     let binds = binds.iter();
 
@@ -284,7 +319,6 @@ pub fn tkbind( input: TokenStream ) -> TokenStream {
     body.stmts.extend( existing_stmts );
 
     let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
-    let cmd = cmd.unwrap_or_else( || parse_quote!("") );
 
     let proc_definition: Vec<Stmt> = if default_values.is_empty() {
         parse_quote!{
@@ -311,6 +345,8 @@ pub fn tkbind( input: TokenStream ) -> TokenStream {
             ).ok();
         }
     };
+
+    let random_value = fastrand::usize(..);
 
     let expanded = quote!{{
         #(#binds)*
@@ -344,14 +380,11 @@ pub fn tkbind( input: TokenStream ) -> TokenStream {
 
         let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
 
-        let address_as_name = format!( "__tclosure_at_{:?}", client_data );
-        let cmd = if (#cmd).is_empty() {
-            address_as_name
-        } else {
-            String::from( #cmd )
-        };
+        let cmd = format!( "__tkbind_closure_{:?}", #random_value.wrapping_add( client_data as usize ));
 
         unsafe{ #(#proc_definition)* }
+
+        (#tk).set( "__self__", cmd.as_str() );
 
         format!( "{}{}", cmd, #args )
     }};
