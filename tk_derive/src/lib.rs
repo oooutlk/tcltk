@@ -1,20 +1,22 @@
 //! Proc macro for tk.
 
+use bind_syn::Bind;
+
 use proc_macro::TokenStream;
 
 use proc_macro2::Span;
 
-use quote::{ToTokens, quote};
+use quote::quote;
 
 use syn::{
     Block,
     Expr,
-    ExprAssign,
     ExprBlock,
     ExprClosure,
-    ExprPath,
     Ident,
     Pat,
+    PatIdent,
+    PatType,
     ReturnType,
     Stmt,
     Token,
@@ -25,131 +27,9 @@ use syn::{
     parse_quote,
     punctuated::Punctuated,
     token,
-    visit::Visit,
 };
 
 use uuid::Uuid;
-
-fn extract_the_only_id_in( expr: &Expr ) -> Option<Ident> {
-    struct Extractor {
-        id  : Option<Ident>,
-        cnt : usize,
-    }
-
-    impl<'a> Visit<'a> for Extractor {
-        fn visit_ident( &mut self, id: &Ident ) {
-            if self.cnt == 0 && self.id.is_none() {
-                self.id = Some( id.clone() );
-            }
-            self.cnt += 1;
-        }
-    }
-
-    let mut extractor = Extractor{ id: None, cnt: 0 };
-    extractor.visit_expr( &expr );
-    extractor.id
-}
-
-enum ExprOrIdent {
-    Expr(  Expr  ),
-    Ident( Ident ),
-}
-
-fn get_expr_or_id( expr: Expr ) -> ExprOrIdent {
-    if let Expr::Path( ExprPath{ attrs, qself, path }) = &expr {
-        if attrs.is_empty() && qself.is_none() {
-            if path.leading_colon.is_none() && path.segments.len() == 1 {
-                let seg = path.segments.first().unwrap();
-                if seg.arguments.is_none() {
-                    return ExprOrIdent::Ident( seg.ident.clone() );
-                }
-            }
-        }
-    }
-    ExprOrIdent::Expr( expr )
-}
-
-#[derive( Clone )]
-enum Bind {
-       Id(     Ident              ),
-    MutId(     Ident              ),
-       IdId(   Ident, Ident       ),
-    MutIdId(   Ident, Ident       ),
-       IdExpr( Ident,        Expr ),
-    MutIdExpr( Ident,        Expr ),
-         Expr( Ident,        Expr ),
-      MutExpr( Ident,        Expr ),
-}
-
-impl Parse for Bind {
-    fn parse( input: ParseStream ) -> parse::Result<Self> {
-        let immutable = if input.peek( Token![mut] ) {
-            input.parse::<Token![mut]>()?;
-            false
-        } else {
-            true
-        };
-
-        let expr = input.parse::<Expr>()?;
-
-        if let Expr::Assign( expr_assign ) = &expr {
-            let ExprAssign{ attrs:_, left, eq_token, right } = expr_assign.clone();
-            let _ = eq_token;
-            if let ExprOrIdent::Ident( id ) = get_expr_or_id( *left ) {
-                match get_expr_or_id( *right ) {
-                    ExprOrIdent::Expr( expr ) =>
-                        return Ok( if immutable {
-                            Bind::IdExpr(    id, expr )
-                        } else {
-                            Bind::MutIdExpr( id, expr )
-                        }),
-                    ExprOrIdent::Ident( id0 ) =>
-                        return Ok( if immutable {
-                            Bind::IdId(      id, id0 )
-                        } else {
-                            Bind::MutIdId(   id, id0 )
-                        }),
-                }
-            }
-        } else {
-            match get_expr_or_id( expr ) {
-                ExprOrIdent::Expr( expr ) =>
-                    match extract_the_only_id_in( &expr ) {
-                        Some( id ) =>
-                            return Ok( if immutable {
-                                Bind::Expr(    id, expr )
-                            } else {
-                                Bind::MutExpr( id, expr )
-                            }),
-                        None => (),
-                    }
-                ExprOrIdent::Ident( id ) =>
-                    return Ok( if immutable {
-                        Bind::Id(    id )
-                    } else {
-                        Bind::MutId( id )
-                    }),
-            }
-        }
-
-        panic!( "Invalid input for `tkbind!()`: {input:?}" );
-    }
-}
-
-impl ToTokens for Bind {
-    fn to_tokens( &self, tokens: &mut proc_macro2::TokenStream ) {
-        tokens.extend( match self {
-            Bind::Id(         id           ) => quote!{ let     #id = #id  .clone(); },
-            Bind::MutId(      id           ) => quote!{ let mut #id = #id  .clone(); },
-            Bind::IdId(       id, id0      ) => quote!{ let     #id = #id0 .clone(); },
-            Bind::MutIdId(    id, id0      ) => quote!{ let mut #id = #id0 .clone(); },
-            Bind::IdExpr(     id,     expr ) => quote!{ let     #id = #expr        ; },
-            Bind::MutIdExpr(  id,     expr ) => quote!{ let mut #id = #expr        ; },
-            Bind::Expr(       id,     expr ) => quote!{ let     #id = #expr        ; },
-            Bind::MutExpr(    id,     expr ) => quote!{ let mut #id = #expr        ; },
-        });
-    }
-}
 
 struct TkbindInput {
     tk      : Expr,
@@ -185,6 +65,59 @@ impl Parse for TkbindInput {
     }
 }
 
+const INPUT_AS_EVENT_DETAILS: &'static str =
+    "tkbind!()'s closure inputs should describe tk event details.";
+
+const INPUT_IDENT_AS_EVENT_DETAILS: &'static str =
+    "tkbind!()'s closure inputs in the form of `name` should describe tk event details.";
+
+const INPUT_IDENT_TYPE_AS_EVENT_DETAILS: &'static str =
+    "tkbind!()'s closure inputs in the form of `name:type` should describe tk event details.";
+
+fn tk_event_detail_name_and_type( id: &Ident ) -> Option<(&'static str, Type)> {
+    match id.to_string().as_str() {
+        "evt_serial"         => Some((" %#", parse_quote!( std::ffi::c_int         ))),
+        "evt_above"          => Some((" %a", parse_quote!( std::ffi::c_int         ))),
+        "evt_button"         => Some((" %b", parse_quote!( tk::event::ButtonNo     ))),
+        "evt_count"          => Some((" %c", parse_quote!( std::ffi::c_int         ))),
+        "evt_detail"         => Some((" %d", parse_quote!( tcl::Obj                ))),
+        "evt_focus"          => Some((" %f", parse_quote!( bool                    ))),
+        "evt_height"         => Some((" %h", parse_quote!( std::ffi::c_int         ))),
+        "evt_window"         => Some((" %i", parse_quote!( std::ffi::c_int         ))),
+        "evt_keycode"        => Some((" %k", parse_quote!( std::ffi::c_int         ))),
+        "evt_mode"           => Some((" %m", parse_quote!( tk::event::TkNotifyMode ))),
+        "evt_override"       => Some((" %o", parse_quote!( bool                    ))),
+        "evt_place"          => Some((" %p", parse_quote!( tk::event::TkPlaceOn    ))),
+        "evt_state"          => Some((" %s", parse_quote!( String                  ))),
+        "evt_time"           => Some((" %t", parse_quote!( std::ffi::c_int         ))),
+        "evt_width"          => Some((" %w", parse_quote!( std::ffi::c_int         ))),
+        "evt_x"              => Some((" %x", parse_quote!( std::ffi::c_int         ))),
+        "evt_y"              => Some((" %y", parse_quote!( std::ffi::c_int         ))),
+        "evt_unicode"        => Some((" %A", parse_quote!( char                    ))),
+        "evt_borderwidth"    => Some((" %B", parse_quote!( std::ffi::c_int         ))),
+        "evt_delta"          => Some((" %D", parse_quote!( std::ffi::c_int         ))),
+        "evt_sendevent"      => Some((" %E", parse_quote!( bool                    ))),
+        "evt_keysym"         => Some((" %K", parse_quote!( char                    ))),
+        "evt_matches"        => Some((" %M", parse_quote!( std::ffi::c_int         ))),
+        "evt_keysym_decimal" => Some((" %N", parse_quote!( std::ffi::c_int         ))),
+        "evt_property"       => Some((" %P", parse_quote!( String                  ))),
+        "evt_root"           => Some((" %R", parse_quote!( std::ffi::c_int         ))),
+        "evt_subwindow"      => Some((" %S", parse_quote!( std::ffi::c_int         ))),
+        "evt_type"           => Some((" %T", parse_quote!( tk::event::TkEventType  ))),
+        "evt_window_path"    => Some((" %W", parse_quote!( String                  ))),
+        "evt_rootx"          => Some((" %X", parse_quote!( std::ffi::c_int         ))),
+        "evt_rooty"          => Some((" %Y", parse_quote!( std::ffi::c_int         ))),
+        _ => None,
+    }
+}
+
+fn id_of_pat( pat: &Pat ) -> Option<Ident> {
+    match pat {
+        Pat::Ident( pat_ident ) => Some( pat_ident.ident.clone() ),
+        _ => None,
+    }
+}
+
 /// Helps to register rust closures as Tk commands as event callbacks.
 #[proc_macro]
 pub fn tkbind( input: TokenStream ) -> TokenStream {
@@ -208,6 +141,36 @@ pub fn tkbind( input: TokenStream ) -> TokenStream {
         closure.inputs.pop();
     }
     let non_variadic_argc = if is_variadic { argc-1 } else { argc };
+
+    let mut args = String::new();
+    for pat in closure.inputs.iter_mut() {
+        match pat {
+            Pat::Type( pat_ty ) => match id_of_pat( &*pat_ty.pat ) {
+                Some( id ) => args.push_str(
+                    tk_event_detail_name_and_type( &id )
+                        .expect( &format!( "{INPUT_IDENT_TYPE_AS_EVENT_DETAILS}: {id}" )).0 ),
+                None => panic!( "{INPUT_IDENT_TYPE_AS_EVENT_DETAILS}" ),
+            }
+            Pat::Ident( pat_ident ) => {
+                let ident = pat_ident.ident.clone();
+                let (name, ty) = tk_event_detail_name_and_type( &ident )
+                    .expect( &format!( "{INPUT_IDENT_AS_EVENT_DETAILS}: {ident}" ));
+                args.push_str( name );
+                *pat = Pat::Type( PatType {
+                    attrs       : vec![],
+                    pat         : Box::new( Pat::Ident( PatIdent{
+                        attrs       : vec![],
+                        by_ref      : None,
+                        mutability  : None,
+                        ident       ,
+                        subpat      : None, })),
+                    colon_token : token::Colon( Span::call_site() ),
+                    ty          : Box::new( ty ),
+                });
+            }
+            _ => panic!( "{INPUT_AS_EVENT_DETAILS}" ),
+        }
+    }
 
     let body = &*closure.body;
     let expr_block: ExprBlock = if let Expr::Block( block ) = body {
@@ -390,7 +353,7 @@ pub fn tkbind( input: TokenStream ) -> TokenStream {
 
         unsafe{ #(#proc_definition)* }
 
-        cmd
+        format!( "{}{}", cmd, #args )
     }};
 
     expanded.into()
