@@ -1,6 +1,8 @@
-extern crate proc_macro;
+//! Proc macro for tcl (and tk).
 
-use self::proc_macro::TokenStream;
+use bind_syn::Bind;
+
+use proc_macro::TokenStream;
 
 use quote::quote;
 
@@ -17,15 +19,18 @@ use syn::{
     Item,
     ItemFn,
     Pat,
+    PatIdent,
+    PatType,
     ReturnType,
     Stmt,
     Token,
     Type,
+    parenthesized,
     parse::{self, Parse, ParseStream},
     parse_macro_input,
     parse_quote,
     punctuated::Punctuated,
-    token::Comma,
+    token::{Comma, Colon},
     visit_mut::VisitMut,
 };
 
@@ -300,7 +305,7 @@ fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, item_fn: It
         );
         let params = (0..argc).fold( String::new(), |acc,n| format!( "{acc} $arg{n}" ));
 
-        let uuid = make_ident( &format!( "__tcl_fn_inner_{}", Uuid::new_v4().to_simple() ));
+        let uuid = make_ident( &format!( "__tcl_fn_inner_{}", Uuid::new_v4().simple() ));
         let name: Expr = parse_quote!{ &format!( "{}", stringify!( #uuid ))};
 
         quote! {{
@@ -399,94 +404,295 @@ pub fn tclfn( input: TokenStream ) -> TokenStream {
     callback_fn( interp, cmd, args, func )
 }
 
-/// Helps to register rust closures as Tcl commands.
-///
-/// See also `tk_derive::tkbind!()` for Tk callbacks.
+struct TclosureInput {
+    tk      : Expr,
+    cmd     : Option<Expr>,
+    args    : Option<Expr>,
+    bind    : Option<Punctuated<Bind,Token![,]>>,
+    closure : ExprClosure,
+}
+
+impl Parse for TclosureInput {
+    fn parse( input: ParseStream ) -> parse::Result<Self> {
+        let tk = input.parse::<Expr>()?;
+        input.parse::<Token![,]>()?;
+
+        let (mut cmd, mut args, mut bind) = (None, None, None);
+        while !input.is_empty() && input.peek( Ident ) {
+            match input.parse::<Ident>()?.to_string().as_str() {
+                "cmd"  => {
+                    input.parse::<Token![:]>()?;
+                    cmd = Some( input.parse::<Expr>()? );
+                }
+                "args" => {
+                    input.parse::<Token![:]>()?;
+                    args = Some( input.parse::<Expr>()? );
+                }
+                "bind" => {
+                    input.parse::<Token![:]>()?;
+                    let content;
+                    parenthesized!( content in input );
+                    bind = Some( Punctuated::parse_terminated( &content )? );
+                }
+                _ => panic!( "unsupported named arguments of tclosure!(), should be `cmd`, `args` or `bind`."),
+            }
+            input.parse::<Token![,]>()?;
+        }
+
+        let closure = input.parse::<ExprClosure>()?;
+
+        Ok( TclosureInput{ tk, cmd, args, bind, closure })
+    }
+}
+
+fn tk_event_detail_name_and_type( id: &Ident ) -> Option<(&'static str, Type)> {
+    match id.to_string().as_str() {
+        "evt_serial"         => Some((" %#", parse_quote!( std::ffi::c_int         ))),
+        "evt_above"          => Some((" %a", parse_quote!( std::ffi::c_int         ))),
+        "evt_button"         => Some((" %b", parse_quote!( tk::event::ButtonNo     ))),
+        "evt_count"          => Some((" %c", parse_quote!( std::ffi::c_int         ))),
+        "evt_detail"         => Some((" %d", parse_quote!( tcl::Obj                ))),
+        "evt_focus"          => Some((" %f", parse_quote!( bool                    ))),
+        "evt_height"         => Some((" %h", parse_quote!( std::ffi::c_int         ))),
+        "evt_window"         => Some((" %i", parse_quote!( std::ffi::c_int         ))),
+        "evt_keycode"        => Some((" %k", parse_quote!( std::ffi::c_int         ))),
+        "evt_mode"           => Some((" %m", parse_quote!( tk::event::TkNotifyMode ))),
+        "evt_override"       => Some((" %o", parse_quote!( bool                    ))),
+        "evt_place"          => Some((" %p", parse_quote!( tk::event::TkPlaceOn    ))),
+        "evt_state"          => Some((" %s", parse_quote!( String                  ))),
+        "evt_time"           => Some((" %t", parse_quote!( std::ffi::c_int         ))),
+        "evt_width"          => Some((" %w", parse_quote!( std::ffi::c_int         ))),
+        "evt_x"              => Some((" %x", parse_quote!( std::ffi::c_int         ))),
+        "evt_y"              => Some((" %y", parse_quote!( std::ffi::c_int         ))),
+        "evt_unicode"        => Some((" %A", parse_quote!( char                    ))),
+        "evt_borderwidth"    => Some((" %B", parse_quote!( std::ffi::c_int         ))),
+        "evt_delta"          => Some((" %D", parse_quote!( std::ffi::c_int         ))),
+        "evt_sendevent"      => Some((" %E", parse_quote!( bool                    ))),
+        "evt_keysym"         => Some((" %K", parse_quote!( char                    ))),
+        "evt_matches"        => Some((" %M", parse_quote!( std::ffi::c_int         ))),
+        "evt_keysym_decimal" => Some((" %N", parse_quote!( std::ffi::c_int         ))),
+        "evt_property"       => Some((" %P", parse_quote!( String                  ))),
+        "evt_root"           => Some((" %R", parse_quote!( std::ffi::c_int         ))),
+        "evt_subwindow"      => Some((" %S", parse_quote!( std::ffi::c_int         ))),
+        "evt_type"           => Some((" %T", parse_quote!( tk::event::TkEventType  ))),
+        "evt_window_path"    => Some((" %W", parse_quote!( String                  ))),
+        "evt_rootx"          => Some((" %X", parse_quote!( std::ffi::c_int         ))),
+        "evt_rooty"          => Some((" %Y", parse_quote!( std::ffi::c_int         ))),
+        _ => None,
+    }
+}
+
+fn id_of_pat( pat: &Pat ) -> Option<Ident> {
+    match pat {
+        Pat::Ident( pat_ident ) => Some( pat_ident.ident.clone() ),
+        _ => None,
+    }
+}
+
+const BAD_INPUT: &'static str = "tclosure!()'s closure inputs should be `id` or `id:type`.";
+
+const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-event-arguments.";
+
+/// Helps to register rust closures as Tcl commands or Tk event callbacks.
 ///
 /// # Syntax
 ///
-/// `tclosure!( interp, cmd, args, closure )`
+/// `tclosure!( $interp:expr, cmd:$cmd:expr, args:$args:expr, bind:($($bind: bind_syn::Bind),*), $closure:expr )`
 ///
 /// # Input parameters
 ///
 /// 1. interp, the Tcl interpreter instance.
 ///
-/// 2. cmd, the name of the command being registered in Tcl. Optional.
+/// 2. cmd, the name of the command being registered in Tcl. Optional. Note: be careful to keep multple closures from sharing
+/// the same `cmd` name.
 ///
 /// 3. args, the arguments provided in Tcl on executing the command. Optional.
+/// You can provide `args` if you don't want this macro to interpret `evt_*` closure arguments as Tk event callback arguments.
 ///
-/// 4. closure, the closure defined in Rust.
+/// 4. bind list, for cloning data into the closure, which is similar inside `bind::bind!()`. Optional.
+///
+/// 5. closure, the closure defined in Rust. Its capture must be `move` and `move` keywords could be omitted.
 ///   Note: an attribute `#[default(value)]` on a parameter will assign a default `value` for this parameter.
+///
+/// Without `args` given, the closure's input arguments which starts with `evt_` will be treated as predefined Tk event callback
+/// arguments. The annotated types can be omitted or substituted by different types.
+///
+/// * evt_serial: c_int
+///
+/// The number of the last client request processed by the server (the serial field from the event). Valid for all event types.
+///
+/// * evt_above: c_int
+///
+/// The above field from the event, formatted as a hexadecimal number. Valid only for Configure events. Indicates the sibling
+/// window immediately below the receiving window in the stacking order, or 0 if the receiving window is at the bottom.
+///
+/// * evt_button: tk::event::ButtonNo
+///
+/// The number of the button that was pressed or released. Valid only for ButtonPress and ButtonRelease events.
+///
+/// * evt_count: c_int
+///
+/// The count field from the event. Valid only for Expose events. Indicates that there are count pending Expose events which
+/// have not yet been delivered to the window.
+///
+/// * evt_detail: Obj
+///
+/// The detail or user_data field from the event.
+///
+/// * evt_focus: bool
+///
+/// The focus field from the event (false or true). Valid only for Enter and Leave events, true if the receiving window is the
+/// focus window or a descendant of the focus window, false otherwise.
+///
+/// * evt_height: c_int
+///
+/// The height field from the event. Valid for the Configure, ConfigureRequest, Create, ResizeRequest, and Expose events.
+/// Indicates the new or requested height of the window.
+///
+/// * evt_window: c_int
+///
+/// The window field from the event, represented as a hexadecimal integer. Valid for all event types.
+///
+/// * evt_keycode: c_int
+///
+/// The keycode field from the event. Valid only for KeyPress and KeyRelease events.
+///
+/// * evt_mode: tk::event::TkNotifyMode
+///
+/// The mode field from the event. Valid only for Enter, FocusIn, FocusOut, and Leave events.
+///
+/// * evt_override: bool
+///
+/// The override_redirect field from the event. Valid only for Map, Reparent, and Configure events.
+///
+/// * evt_place: tk::event::TkPlaceOn
+///
+/// The place field from the event, substituted as one of the strings PlaceOnTop or PlaceOnBottom. Valid only for Circulate and
+/// CirculateRequest events.
+///
+/// * evt_state: String
+///
+/// The state field from the event. For ButtonPress, ButtonRelease, Enter, KeyPress, KeyRelease, Leave, and Motion events, a
+/// decimal string is substituted. For Visibility, one of the strings VisibilityUnobscured, VisibilityPartiallyObscured, and
+/// VisibilityFullyObscured is substituted. For Property events, substituted with either the string NewValue (indicating that
+/// the property has been created or modified) or Delete (indicating that the property has been removed).
+///
+/// * evt_time: c_int
+///
+/// The time field from the event. This is the X server timestamp (typically the time since the last server reset) in
+/// milliseconds, when the event occurred. Valid for most events.
+///
+/// * evt_width: c_int
+///
+/// The width field from the event. Indicates the new or requested width of the window. Valid only for Configure,
+/// ConfigureRequest, Create, ResizeRequest, and Expose events.
+///
+/// * evt_x: c_int, evt_y: c_int
+///
+/// The x and y fields from the event. For ButtonPress, ButtonRelease, Motion, KeyPress, KeyRelease, and MouseWheel events,
+/// evt_x and evt_y indicate the position of the mouse pointer relative to the receiving window. For key events on the Macintosh
+/// these are the coordinates of the mouse at the moment when an X11 KeyEvent is sent to Tk, which could be slightly later than
+/// the time of the physical press or release. For Enter and Leave events, the position where the mouse pointer crossed the
+/// window, relative to the receiving window. For Configure and Create requests, the x and y coordinates of the window relative
+/// to its parent window.
+///
+/// * evt_unicode: char
+///
+/// Substitutes the UNICODE character corresponding to the event, or the empty string if the event does not correspond to a
+/// UNICODE character (e.g. the shift key was pressed). On X11, XmbLookupString (or XLookupString when input method support is
+/// turned off) does all the work of translating from the event to a UNICODE character. On X11, valid only for KeyPress event.
+/// On Windows and macOS/aqua, valid only for KeyPress and KeyRelease events.
+///
+/// * evt_borderwidth: c_int
+///
+/// The border_width field from the event. Valid only for Configure, ConfigureRequest, and Create events.
+///
+/// * evt_delta: c_int
+///
+/// This reports the delta value of a MouseWheel event. The delta value represents the rotation units the mouse wheel has been
+/// moved. The sign of the value represents the direction the mouse wheel was scrolled.
+///
+/// * evt_sendevent: bool
+///
+/// The send_event field from the event. Valid for all event types, false indicates that this is a “normal” event, true
+/// indicates that it is a “synthetic” event generated by SendEvent.
+///
+/// * evt_keysym: char
+///
+/// The keysym corresponding to the event, as a textual `char`. Valid only for KeyPress and KeyRelease events.
+///
+/// * evt_matches: c_int
+///
+/// The number of script-based binding patterns matched so far for the event. Valid for all event types.
+///
+/// * evt_keysym_decimal: c_int
+///
+/// The keysym corresponding to the event, substituted as a number. Valid only for KeyPress and KeyRelease events.
+///
+/// * evt_property: String
+///
+/// The name of the property being updated or deleted (which may be converted to an XAtom using winfo atom.) Valid only for
+/// Property events.
+///
+/// * evt_root: c_int
+///
+/// The root window identifier from the event. Valid only for events containing a root field.
+///
+/// * evt_subwindow: c_int
+///
+/// The subwindow window identifier from the event, formatted as a hexadecimal number. Valid only for events containing a
+/// subwindow field.
+///
+/// * evt_type: tk::event::TkEventType
+///
+/// The type field from the event. Valid for all event types.
+///
+/// * evt_window_path: String
+///
+/// The path name of the window to which the event was reported (the window field from the event). Valid for all event types.
+///
+/// * evt_rootx: c_int, evt_rooty: c_int
+///
+/// The x_root and y_root fields from the event. If a virtual-root window manager is being used then the substituted values are
+/// the corresponding x-coordinate and y-coordinate in the virtual root. Valid only for ButtonPress, ButtonRelease, Enter,
+/// KeyPress, KeyRelease, Leave and Motion events. Same meaning as evt_x and evt_y, except relative to the (virtual) root
+/// window.
 ///
 /// # Output
 ///
 /// Returns a `String` of the command name.
 ///
-/// # Example
+/// # Example, Tk Event callback
 ///
 /// ```rust,no_run
+/// widget.bind( button_press_2(),
+///     tclosure!( tk, |evt_x, evt_y| -> TkResult<()> {
+///         Ok( tk.popup( menu, evt_x, evt_y, None )? )
+///     })
+/// )?;
+/// ```
 ///
-/// use tcl::*;
+/// # Example, Poll
 ///
-/// let offset = 0;
-/// let interpreter = Interpreter::new()?;
-///
-/// let cmd = tclosure!( &interpreter, /*cmd: "mul", args: "",*/
-///     move |a: i32, b: i32| -> TclResult<i32> { Ok( a * b + offset )}
-/// );
-///
-/// let a = 3;
-/// let b = 7;
-/// let c = interpreter.eval(( "eval", cmd, a, b ))?;
-/// assert_eq!( c.as_i32(), 21 );
+/// ```rust,no_run
+/// tk.run( tclosure!( tk, cmd:"poll" || {
+///     {/* poll and do lots of work, omitted */}
+///     tk.after( 100, ("poll",) )?;
+///     Ok(())
+/// }))?;
 /// ```
 #[proc_macro]
 pub fn tclosure( input: TokenStream ) -> TokenStream {
-    struct TclosureInput {
-        interp  : Expr,
-        cmd     : Option<Expr>,
-        args    : Option<Expr>,
-        closure : ExprClosure,
-    }
+    let TclosureInput{ tk, cmd, args, bind, mut closure } = parse_macro_input!( input as TclosureInput );
+    let bind = bind.unwrap_or_default();
+    let bind = bind.iter();
 
-    impl Parse for TclosureInput {
-        fn parse( input: ParseStream ) -> parse::Result<Self> {
-            let interp = input.parse::<Expr>()?;
-            input.parse::<Token![,]>()?;
-
-            let (mut cmd, mut args) = (None, None);
-            while !input.is_empty() && input.peek( Ident ) {
-                match input.parse::<Ident>()?.to_string().as_str() {
-                    "cmd"  => {
-                        input.parse::<Token![:]>()?;
-                        cmd = Some( input.parse::<Expr>()? );
-                    },
-                    "args" => {
-                        input.parse::<Token![:]>()?;
-                        args = Some( input.parse::<Expr>()? );
-                    },
-                    _ => panic!( "unsupported named arguments of tclosure!(), should be `cmd` or `args`."),
-                }
-                input.parse::<Token![,]>()?;
-            }
-
-            let closure = input.parse::<ExprClosure>()?;
-            Ok( TclosureInput{ interp, cmd, args, closure })
-        }
-    }
-
-    let TclosureInput{ interp, cmd, args, closure } = parse_macro_input!( input as TclosureInput );
-    callback_closure( interp, cmd, args, closure )
-}
-
-fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut closure: ExprClosure ) -> TokenStream {
     let output = match &closure.output {
-        ReturnType::Default => parse_quote!( Result<(), tcl::error::InterpError> ),
+        ReturnType::Default => parse_quote!( Result<(), tk::error::InterpError> ),
         ReturnType::Type( _, ty ) => ty.clone(),
     };
 
     let attrs = closure.attrs;
-    let capture = &closure.capture;
     let argc = closure.inputs.len();
 
     let is_variadic = closure.inputs
@@ -497,6 +703,43 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
         closure.inputs.pop();
     }
     let non_variadic_argc = if is_variadic { argc-1 } else { argc };
+
+    let args = args.unwrap_or_else( || {
+        let mut args = String::new();
+        for pat in closure.inputs.iter_mut() {
+            match pat {
+                Pat::Type( pat_ty ) => match id_of_pat( &*pat_ty.pat ) {
+                    Some( id ) => match tk_event_detail_name_and_type( &id ) {
+                        Some((name, _)) => args.push_str( name ),
+                        None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
+                    }
+                    None => panic!( "{BAD_INPUT}" ),
+                }
+                Pat::Ident( pat_ident ) => {
+                    let ident = pat_ident.ident.clone();
+                    match tk_event_detail_name_and_type( &ident ) {
+                        Some((name, ty)) => {
+                            args.push_str( name );
+                            *pat = Pat::Type( PatType {
+                                attrs       : vec![],
+                                pat         : Box::new( Pat::Ident( PatIdent{
+                                    attrs       : vec![],
+                                    by_ref      : None,
+                                    mutability  : None,
+                                    ident       ,
+                                    subpat      : None, })),
+                                colon_token : Colon( Span::call_site() ),
+                                ty          : Box::new( ty ),
+                            });
+                        }
+                        None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
+                    }
+                }
+                _ => panic!( "{BAD_INPUT}" ),
+            }
+        }
+        parse_quote!( #args )
+    });
 
     let body = &*closure.body;
     let expr_block: ExprBlock = if let Expr::Block( block ) = body {
@@ -609,14 +852,12 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
 
     body.stmts.extend( existing_stmts );
 
-    let args = args.unwrap_or_else( || parse_quote!( "" ));
-
-    let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().to_simple() ));
+    let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().simple() ));
     let cmd = cmd.unwrap_or_else( || parse_quote!("") );
 
     let proc_definition: Vec<Stmt> = if default_values.is_empty() {
         parse_quote!{
-             (#interp).def_proc_with_client_data( cmd.as_str(), #uuid, client_data, Some( __deleter ));
+             (#tk).def_proc_with_client_data( cmd.as_str(), #uuid, client_data, Some( __deleter ));
         }
     } else {
         let name: Expr = parse_quote!{ &format!( "__tcl_fn_{}", stringify!( #uuid ))};
@@ -633,14 +874,18 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
         let params = (0..argc).fold( String::new(), |acc,n| format!( "{acc} $arg{n}" ));
 
         parse_quote!{
-            (#interp).def_proc_with_client_data( #name, #uuid, client_data, Some( __deleter ));
-            (#interp).run(
+            (#tk).def_proc_with_client_data( #name, #uuid, client_data, Some( __deleter ));
+            (#tk).run(
                 format!( "proc {} {{ {} }} {{ {} {} }}", cmd, #param_list, #name, #params )
             ).ok();
         }
     };
 
+    let (_, random_value) = Uuid::new_v4().as_u64_pair();
+
     let expanded = quote!{{
+        #(#bind)*
+
         extern "C" fn #uuid( __client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj ) -> std::os::raw::c_int {
             let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
             match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
@@ -665,12 +910,12 @@ fn callback_closure( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut cl
         let closure: Box<Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output>> = Box::new( __box_new_static_closure(
             #(#attrs)*
             #[allow( unused_macros )]
-            #capture |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
+            move |__client_data: tcl::reexport_clib::ClientData, __tcl_interp: *mut tcl::reexport_clib::Tcl_Interp, __objc: std::os::raw::c_int, __objv: *const *mut tcl::reexport_clib::Tcl_Obj| -> #output #body
         ));
 
         let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
 
-        let address_as_name = format!( "__tclosure_at_{:?}", client_data );
+        let address_as_name = format!( "__tkbind_closure_{:?}", #random_value.wrapping_add( client_data as u64 ));
         let cmd = if (#cmd).is_empty() {
             address_as_name
         } else {

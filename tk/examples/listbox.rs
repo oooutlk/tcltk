@@ -70,7 +70,7 @@ fn main() -> TkResult<()> {
     //
     // Figure out which country is selected, which gift is selected with the
     // radiobuttons, "send the gift", and provide feedback that it was sent.
-    let send_gift = tkbind!( tk, || -> TkResult<()> {
+    let send_gift = tclosure!( tk, || -> TkResult<()> {
         let interp = tcl_interp!();
         let idx = lbox.curselection()?;
         if idx.len() == 1 {
@@ -116,7 +116,7 @@ fn main() -> TkResult<()> {
     // with the new population.  As well, clear the message about the
     // gift being sent, so it doesn't stick around after we start doing
     // other things.
-    let show_population = tkbind!( tk, || -> TkResult<()> {
+    let show_population = tclosure!( tk, || -> TkResult<()> {
         let interp = tcl_interp!();
         let idx = lbox.curselection()?;
         if idx.len() == 1 {
@@ -158,13 +158,13 @@ fn main() -> TkResult<()> {
 
     //
     //lbox.bind( event::virtual_event( "ListboxSelect" ),
-    //    tkbind!( tk, || -> TkResult<()> {
+    //    tclosure!( tk, || -> TkResult<()> {
     //        Ok( update_details( lbox.curselection()? ))
     //    }
     //))?;
     //
     //lbox.bind( event::double().button_press_1(),
-    //    tkbind!( tk, || -> TkResult<()> {
+    //    tclosure!( tk, || -> TkResult<()> {
     //        Ok( invoke_action( lbox.curselection()? ))
     //    }
     //))?;

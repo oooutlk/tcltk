@@ -14,7 +14,7 @@ fn main() -> TkResult<()> {
     apple.add_separator(())?;
     win.configure( -menu(menubar) )?;
 
-    tkbind!( tk, cmd: "tk::mac::ShowPreferences", || -> TkResult<()> {
+    tclosure!( tk, cmd: "tk::mac::ShowPreferences", || -> TkResult<()> {
         // show preferences
         Ok(())
     });
@@ -23,7 +23,7 @@ fn main() -> TkResult<()> {
     {
         let menu_help = menubar.add_menu( "help" )?;
         menubar.add_cascade( -menu(menu_help) -label("Help") )?;
-        tkbind!( tk, cmd: "::tk::mac::ShowHelp", || -> TkResult<()> {
+        tclosure!( tk, cmd: "::tk::mac::ShowHelp", || -> TkResult<()> {
             //show help
             Ok(())
         });

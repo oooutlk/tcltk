@@ -13,7 +13,7 @@ fn main() -> TkResult<()> {
     let l = root
         .add_ttk_label( "l" -text("Hello World") -font("helvetica 24") )?
         .grid( -padx(10) -pady(10) )?;
-    let on_font_changed = tkbind!( tk,
+    let on_font_changed = tclosure!( tk,
         |some_font:Obj| -> TkResult<()> {
             Ok( l.configure( -font(some_font) )? )
         }

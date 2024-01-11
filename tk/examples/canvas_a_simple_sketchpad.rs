@@ -14,7 +14,7 @@ fn main() -> TkResult<()> {
     root.grid_columnconfigure( 0, -weight(1) )?;
     root.grid_rowconfigure( 0, -weight(1) )?;
     Widget::bind( &canvas, event::button_press_1(), "set lastx %x; set lasty %y" )?;
-    Widget::bind( &canvas, event::button_1().motion(), tkbind!( tk,
+    Widget::bind( &canvas, event::button_1().motion(), tclosure!( tk,
         |evt_x:c_double, evt_y:c_double| -> TkResult<()> {
             let last_x = tk.get_double("lastx")?;
             let last_y = tk.get_double("lasty")?;

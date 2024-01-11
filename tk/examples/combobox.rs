@@ -9,7 +9,7 @@ fn main() -> TkResult<()> {
     let country = root.add_ttk_combobox( "country" -textvariable("country") )?
         .pack(())?;
 
-    let script = tkbind!( tk,
+    let script = tclosure!( tk,
         || -> TkResult<()> { Ok( println!( "combobox {} item selected: {}", country.path(), country.get()? ))}
     );
 

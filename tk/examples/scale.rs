@@ -24,7 +24,7 @@ fn main() -> TkResult<()> {
             -from(     1.0          )
             -to(       100.0        )
             -variable( "num"        )
-            -command( tkbind!( tk, |val: c_double| -> TkResult<()> {
+            -command( tclosure!( tk, |val: c_double| -> TkResult<()> {
                 Ok( manual.configure( -text( format!( "Scale at {}", val )))? )
             }))
         )?
