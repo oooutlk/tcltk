@@ -146,7 +146,7 @@ let f_btn = f.add_ttk_button( "btn" -text("Process") )?
 
 f_btn.set_state( TtkState::Disabled )?;
 
-let check_zip_cmd = tclosure!( tk, cmd: "check_zip", args: "%P %V",
+let check_zip_cmd = tkbind!( tk, cmd: "check_zip", args: "%P %V",
     move |new_val: String, op: String| -> TkResult<bool> {
         let interp = tcl_interp!();
         interp.set( "errmsg", "" );

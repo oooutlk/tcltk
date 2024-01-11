@@ -63,8 +63,8 @@ fn main() -> TkResult<()> {
 
         f_btn.set_state( TtkState::Disabled )?;
 
-        let check_zip_cmd = tclosure!( tk, cmd: "check_zip", args: "%P %V",
-            move |new_val: String, op: String| -> TkResult<bool> {
+        let check_zip_cmd = tkbind!( tk, cmd: "check_zip", args: "%P %V",
+            |new_val: String, op: String| -> TkResult<bool> {
                 let interp = tcl_interp!();
                 interp.set( "errmsg", "" );
 

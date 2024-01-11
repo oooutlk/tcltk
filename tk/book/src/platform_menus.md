@@ -86,7 +86,7 @@ To hook up your preferences dialog, you'll need to define a Tcl procedure named
 is chosen; if the procedure is not defined, the menu item will be disabled.
 
 ```rust,no_run
-tclosure!( tk, cmd: "tk::mac::ShowPreferences", move || -> TkResult<()> {
+tkbind!( tk, cmd: "tk::mac::ShowPreferences", || -> TkResult<()> {
     // show preferences
     Ok(())
 });
@@ -121,7 +121,7 @@ application help item.
 ```rust,no_run
 let menu_help = menubar.add_menu( "help" )?;
 menubar.add_cascade( -menu(menu_help) -label("Help") )?;
-tclosure!( tk, cmd: "::tk::mac::ShowHelp", move || -> TkResult<()> {
+tkbind!( tk, cmd: "::tk::mac::ShowHelp", || -> TkResult<()> {
     // show help
     Ok(())
 });

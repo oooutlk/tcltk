@@ -7,6 +7,7 @@ license = "MIT/Apache-2.0"
 keywords = [ "gui", "tcl", "tk", "binding" ]
 repository = "https://github.com/oooutlk/tcltk"
 homepage = "https://oooutlk.github.io/tk/"
+readme = "README.md"
 categories = [ "gui", "api-bindings" ]
 description = "Rust bindings for Tk GUI library"
 

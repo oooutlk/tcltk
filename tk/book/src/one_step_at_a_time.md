@@ -59,7 +59,7 @@ fn main() -> TkResult<()> {
         Ok(())
     });
 
-    tclosure!( tk, cmd: "result", move |answer: String| -> TkResult<()> {
+    tkbind!( tk, cmd: "result", |answer: String| -> TkResult<()> {
         f_p.configure( -value(0) )?;
         f_b.configure( -text("Start!") -command("start") )?;
         f_l.configure( -text({
@@ -72,7 +72,7 @@ fn main() -> TkResult<()> {
         Ok(())
     });
 
-    tclosure!( tk, cmd: "step", move |count: c_int| ->TkResult<()> {
+    tkbind!( tk, cmd: "step", |count: c_int| ->TkResult<()> {
         let interp = tcl_interp!();
 
         f_p.configure( -value(count) )?;
@@ -87,7 +87,7 @@ fn main() -> TkResult<()> {
             return Ok(());  // done!
         }
 
-        interp.after( 100, ( tclosure!( tk, move || -> TkResult<()> {
+        interp.after( 100, ( tkbind!( tk, || -> TkResult<()> {
             tcl_interp!().eval(( "step", count+1 ))?;
             Ok(())
         }), ))?;
@@ -95,7 +95,7 @@ fn main() -> TkResult<()> {
         Ok(())
     });
 
-    f_b.configure( -command( tclosure!( tk, cmd:"start", move || -> TkResult<()> {
+    f_b.configure( -command( tkbind!( tk, cmd:"start", || -> TkResult<()> {
         f_b.configure( -text("Stop") -command("stop") )?;
         f_l.configure( -text("Working...") )?;
         let interp = tcl_interp!();

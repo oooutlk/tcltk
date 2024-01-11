@@ -6,6 +6,7 @@ edition = "2021"
 license = "MIT/Apache-2.0"
 keywords = [ "tcl", "binding" ]
 repository = "https://github.com/oooutlk/tcltk"
+readme = "README.md"
 categories = [ "api-bindings" ]
 description = "Rust bindings for Tcl language"
 
