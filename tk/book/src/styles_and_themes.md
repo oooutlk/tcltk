@@ -109,7 +109,7 @@ application developer using the widget.
 > Using styles, widget authors don't need to provide code for every possible
 appearance option. That not only simplifies the widget but paradoxically ensures
 that a wider range of appearances can be set, including those the widget author
-may not have anticipated. 
+may not have anticipated.
 
 ## Run Example
 

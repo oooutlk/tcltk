@@ -40,4 +40,4 @@ boundaries. The bottom left label in the figure above uses the default anchor
 > If you're having trouble getting things to line up the way you want them to,
 first make sure you know how large the widget is. As we discussed with the
 `label` widget in the previous chapter, changing the widget's background or
-border can help. 
+border can help.

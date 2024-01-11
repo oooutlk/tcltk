@@ -22,7 +22,7 @@ shorter entry for a zip or postal code.
 
 We've seen how checkbutton and radiobutton widgets have a value associated with
 them. Entries do as well, and that value is usually accessed through a linked
-variable specified by the `textvariable` configuration option. 
+variable specified by the `textvariable` configuration option.
 
 > Unlike the various buttons, entries don't have a text or image beside them to
 identify them. Use a separate label widget for that.

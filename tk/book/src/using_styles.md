@@ -168,4 +168,4 @@ frame widget had a class of `SpecialFrame`, while others would have the default
 class `Frame`. You could use the option database to change the appearance of
 just the `SpecialFrame` frames.
 
-> Styles and themes take that simple idea and give it rocket boosters. 
+> Styles and themes take that simple idea and give it rocket boosters.

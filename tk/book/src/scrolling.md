@@ -69,7 +69,7 @@ fn main() -> TkResult<()> {
         |evt_x:c_double, evt_y:c_double| -> TkResult<()> {
             let x = canvas.canvasx( evt_x, None )?;
             let y = canvas.canvasy( evt_y, None )?;
-        
+
             let last_x = tk.get_double("lastx")?;
             let last_y = tk.get_double("lasty")?;
             let color = tk.get("color")?;

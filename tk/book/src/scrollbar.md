@@ -31,7 +31,7 @@ Unlike in some user interface toolkits, Tk scrollbars are not a part of another
 widget (e.g., a listbox), but are a separate widget altogether. Instead,
 scrollbars communicate with the scrolled widget by calling methods on the
 scrolled widget; as it turns out, the scrolled widget also needs to call methods
-on the scrollbar. 
+on the scrollbar.
 
 > If you're using a recent Linux distribution, you've probably noticed that the
 scrollbars you see in many applications have changed to look more like what

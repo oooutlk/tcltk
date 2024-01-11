@@ -55,7 +55,7 @@ standard widgets use these named fonts. The predefined fonts are:
 
 `TkIconFont`        : A font for icon captions.
 
-`TkTooltipFont`     : A font for tooltips. 
+`TkTooltipFont`     : A font for tooltips.
 
 ## Platform-Specific Fonts
 
@@ -129,7 +129,7 @@ The `family` attribute specifies the font family. Tk ensures the names
 `Courier`, `Times`, and `Helvetica` are available, though they may be mapped to
 an appropriate monospaced, serif, or sans-serif font). Other fonts installed on
 your system can be used, but the usual caveats about portability apply. You can
-get the names of all available families with: 
+get the names of all available families with:
 
 ```rust,no_run
 println!( "{:#?}", tk.font_families()? );

@@ -21,7 +21,7 @@ fn main() -> TkResult<()> {
     let root = tk.root();
 
     let n = root.add_ttk_notebook(())?.pack(())?;
-    let f1 = n.add_ttk_frame(())?; // first page, which would get widgets gridded into it 
+    let f1 = n.add_ttk_frame(())?; // first page, which would get widgets gridded into it
     let f2 = n.add_ttk_frame(())?; // second page
     n.add( &f1, -text("One") )?;
     n.add( &f2, -text("Two") )?;
@@ -35,7 +35,7 @@ page is typically a frame and again must be a direct child (subwindow) of the
 notebook itself. A new page and its associated tab are added after the last tab
 with the `add( subwindow, options )` method. The `text` tab option sets the
 label on the tab; also useful is the `state` tab option, which can have the
-value `normal`, `disabled` (not selectable), or `hidden`. 
+value `normal`, `disabled` (not selectable), or `hidden`.
 
 To insert a tab at somewhere other than the end of the list, use the
 `insert( &self, position, subwindow options )`, and to remove a given tab, use

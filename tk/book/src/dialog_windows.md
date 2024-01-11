@@ -127,10 +127,10 @@ methods instead).
   chooser with its current font. This also means that a callback from the font
   dialog may apply to a different text widget than the one you initially called
   `show` from! Finally, be aware that the font chooser itself may gain the
-  keyboard focus on some platforms. 
+  keyboard focus on some platforms.
 
 > As of Tk 8.6.10, there are a few bugs in the font chooser on various
-  platforms. Here's a quick rundown including workarounds: 
+  platforms. Here's a quick rundown including workarounds:
 
 > - on macOS, if you don't provide a font via the `font` configuration option,
   your callbacks won't be invoked ⇒ always provide an initial font
@@ -153,7 +153,7 @@ methods instead).
 > - on Windows, a font change virtual event is not generated if you change the
   `font` configuration option in your code, though it is on macOS and X11 ⇒ take
   any necessary actions when you change the font in your code rather than in a
-  virtual event handler 
+  virtual event handler
 
 > Because of the differences between platforms and the various bugs, testing is
   far more important when using the font chooser than the other system dialogs.
@@ -194,7 +194,7 @@ of a user's action to the caller. The exact return value will depend on the
 `yesno`:              ⇒ `yes` or `no`
 `yesnocancel`:        ⇒ `yes`, `no` or `cancel`
 `retrycancel`:        ⇒ `retry` or `cancel`
-`abortretryignore`:   ⇒ `abort`, `retry` or `ignore` 
+`abortretryignore`:   ⇒ `abort`, `retry` or `ignore`
 
 The full list of possible options is shown here:
 

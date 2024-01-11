@@ -26,7 +26,7 @@ the same weight, they'll expand at the same rate. In our example, we'll give the
 three leftmost columns (holding the checkbuttons) a weight of 3, and the two
 rightmost columns a weight of 1. For every one pixel the right columns grow, the
 left columns will grow by three pixels. So as the window grows larger, most of
-the extra space will go to the left side. 
+the extra space will go to the left side.
 
 |                Resizing the window after adding weights               |
 | :-------------------------------------------------------------------: |

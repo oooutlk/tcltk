@@ -52,7 +52,7 @@ or more items from the list.
 Use the `get( &self, index: impl Into<Index> )` method to return the contents of
 a single item at the given position, or use the
 `get_range( &self, range: impl Into<TkRange<Index>> )` method to get a list of
-the items in the `range`. 
+the items in the `range`.
 
 The `size` method returns the number of items in the list.
 

@@ -30,7 +30,7 @@ In their default state, spinboxes allow users to select values either via the up
 and down buttons, or by typing them directly into the entry area that displays
 the current value. If you'd like to disable the latter feature, so that only the
 up and down buttons are available, you can set the `TtkState::ReadOnly` state
-flag. 
+flag.
 
 ```rust,no_run
 s.set_state( TtkState::ReadOnly )?;

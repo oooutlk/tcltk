@@ -3,7 +3,7 @@
 A *text* widget provides users with an area so that they can enter multiple
 lines of text. Text widgets are part of the classic Tk widgets, not the themed
 Tk widgets.
- 
+
 |               Text widgets                |
 | :---------------------------------------: |
 | ![Text widgets.](./images/w_text_all.png) |
@@ -13,7 +13,7 @@ widgets that provide amazingly deep but easily programmed features. Text widgets
 have formed the basis for full word processors, outliners, web browsers, and
 more. We'll get into some of the advanced stuff in a later chapter. Here, we'll
 show you how to use the text widget to capture fairly simple, multi-line text
-input. 
+input.
 
 Text widgets are created using the `add_tk_text` method:
 
@@ -41,7 +41,7 @@ Scrolling works the same way as in listboxes. The `xscrollcommand` and
 `yscrollcommand` configuration options attach the text widget to horizontal
 and/or vertical scrollbars, and the `xview` and `yview` methods are called from
 scrollbars. To ensure that a given line is visible (i.e., not scrolled out of
-view), you can use the `see( index )` method. 
+view), you can use the `see( index )` method.
 
 ## Contents
 

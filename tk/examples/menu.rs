@@ -78,7 +78,7 @@ fn main() -> TkResult<()> {
         -command( tclosure!( tk, || -> TkResult<()> {
             Ok( root.event_generate( event::virtual_event("OpenFindDialog"), () )? )})))?;
     root.configure( -menu(m) )?;
- 
+
     root.bind( event::virtual_event("OpenFindDialog"), tclosure!( tk, || -> TkResult<String> {
         Ok( tk.message_box( -message("I hope you find what you're looking for!") )? )
     }))?;

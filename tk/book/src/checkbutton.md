@@ -23,7 +23,7 @@ control the display of the label (next to the checkbox itself). Similarly, the
 `command` option lets you specify a command to be called every time a user
 toggles the checkbutton; and the `invoke` method will also execute the same
 command. The `state` and `instate` methods allow you to manipulate the
-`disabled` state flag to enable or disable the checkbutton. 
+`disabled` state flag to enable or disable the checkbutton.
 
 ## Widget Value
 

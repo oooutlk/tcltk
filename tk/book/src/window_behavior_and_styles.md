@@ -188,7 +188,7 @@ you can raise and lower them relative to each other:
 
 ```rust,no_run
 let little = root.add_ttk_label( "little" -text("Little") )?
-    .grid( -column(0) -row(0) )?; 
+    .grid( -column(0) -row(0) )?;
 root.add_ttk_label( "bigger" -text("Much Bigger Label") )?
     .grid( -column(0) -row(0) )?;
 tk.after( 2000, (tclosure!( tk,

@@ -17,4 +17,4 @@ colors, names of column headings, and more. Here are a few additional ones.
   (default is "tree headings" to show both).
 * You can specify whether a single item or multiple items can be selected by
   users via the `selectmode` widget configuration option, passing `browse`
-  (single item), `extended` (multiple items, the default), or `none`. 
+  (single item), `extended` (multiple items, the default), or `none`.

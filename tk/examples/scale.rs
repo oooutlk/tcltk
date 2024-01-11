@@ -12,11 +12,11 @@ fn main() -> TkResult<()> {
     // label tied to the same variable as the scale, so auto-updates
     root.add_ttk_label( "auto" -textvariable("num") )?
         .grid( -column(0) -row(0) -sticky("we") )?;
-    
+
     // label that we'll manually update via the scale's command callback
     let manual = root.add_ttk_label( "manual" )?
         .grid( -column(0) -row(1) -sticky("we") )?;
-    
+
     let scale =
         root.add_ttk_scale( "scale"
             -orient(   "horizontal" )
@@ -28,8 +28,8 @@ fn main() -> TkResult<()> {
                 Ok( manual.configure( -text( format!( "Scale at {}", val )))? )
             }))
         )?
-       .grid( -column(0) -row(2) -sticky("we") )?; 
-    
+       .grid( -column(0) -row(2) -sticky("we") )?;
+
     scale.set( 20.0 )?;
 
     Ok( main_loop() )

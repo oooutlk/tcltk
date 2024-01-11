@@ -31,7 +31,7 @@ option. We saw this in the example with the `command` option of the button.
 #[proc] fn calculate() { /* omitted */ }
 
 content.add_ttk_button( ".c.calc" -text("Calculate") -command("calculate") )?;
-``` 
+```
 
 ## Binding to Events
 

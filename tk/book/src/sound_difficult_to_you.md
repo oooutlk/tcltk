@@ -105,7 +105,7 @@ typically documented (outside of reading the theme definition files themselves)
 but are generally identified via theme introspection (which we'll see soon).
 Because all themes aren't available on all platforms (e.g., `aqua` is only
 available on macOS), you'll need ready access to every platform and theme you
-need to run on. 
+need to run on.
 
 Consider trying to customize a button. You know it uses the `TButton` style. But
 that style is implemented using a different theme on each platform. If you

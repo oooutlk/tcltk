@@ -105,7 +105,7 @@ fn main() -> TkResult<()> {
 }
 ```
 
-## Creating Widgets, In One Expression Without Geometry 
+## Creating Widgets, In One Expression Without Geometry
 
 Similar with the "All In One" style, except that the geometry managers are
 defined separatedly.
