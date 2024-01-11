@@ -31,10 +31,10 @@ fn main() -> TkResult<()> {
 
     // ## Validation
     {
-        let validate_cmd = tclfn!( &tk, args: "%P",
-            fn check_num( new_val: String ) -> TclResult<bool> {
-                Ok( new_val.len() <= 5 &&
-                    new_val.chars().filter( |&ch| ch >= '0' && ch <= '9' ).count() <= 5 )
+        let validate_cmd = tclfn!( &tk,
+            fn check_num( vldt_new: String ) -> TclResult<bool> {
+                Ok( vldt_new.len() <= 5 &&
+                    vldt_new.chars().filter( |&ch| ch >= '0' && ch <= '9' ).count() <= 5 )
             }
         );
 
@@ -63,32 +63,33 @@ fn main() -> TkResult<()> {
 
         f_btn.set_state( TtkState::Disabled )?;
 
-        let check_zip_cmd = tclosure!( tk, cmd: "check_zip", args: "%P %V",
-            |new_val: String, op: String| -> TkResult<bool> {
+        let check_zip_cmd = tclosure!( tk, cmd: "check_zip",
+            |vldt_new, vldt_op| -> TkResult<bool> {
                 let interp = tcl_interp!();
                 interp.set( "errmsg", "" );
 
                 let re = r#"^[0-9]{5}(\-[0-9]{4})?$"#;
                 let regex = Regex::new( re ).unwrap();
-                let valid = regex.is_match( &new_val );
+                let valid = regex.is_match( &vldt_new );
                 f_btn.set_state( if valid{ !TtkState::Disabled } else{ TtkState::Disabled })?;
-                if op == "key" {
-                    let regex = Regex::new( r#"^[0-9\-]*$"# ).unwrap();
-                    let ok_so_far = regex.is_match( &new_val ) && new_val.len() <= 10;
-                    if !ok_so_far {
-                        interp.set( "errmsg", FORMATMSG );
+                use event::TkValidationOp::*;
+                match vldt_op {
+                    Key => {
+                        let regex = Regex::new( r#"^[0-9\-]*$"# ).unwrap();
+                        let ok_so_far = regex.is_match( &vldt_new ) && vldt_new.len() <= 10;
+                        if !ok_so_far {
+                            interp.set( "errmsg", FORMATMSG );
+                        }
+                        return Ok( true );
                     }
-                    return Ok( true );
-                } else if op == "focusout" {
-                    if !valid {
-                        interp.set( "errmsg", FORMATMSG );
+                    FocusOut => {
+                        if !valid {
+                            interp.set( "errmsg", FORMATMSG );
+                        }
                     }
+                    _ => (),
                 }
-                if valid {
-                    Ok( true )
-                } else {
-                    Ok( false )
-                }
+                Ok( valid )
             }
         );
 

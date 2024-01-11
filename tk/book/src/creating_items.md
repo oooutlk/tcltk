@@ -58,7 +58,7 @@ fn main() -> TkResult<()> {
     root.grid_columnconfigure( 0, -weight(1) )?;
     root.grid_rowconfigure( 0, -weight(1) )?;
     Widget::bind( &canvas, event::button_press_1(), "set lastx %x; set lasty %y" )?;
-    Widget::bind( &canvas, event::button_1().motion(), tkbind!( tk,
+    Widget::bind( &canvas, event::button_1().motion(), tclosure!( tk,
         |evt_x:c_double, evt_y:c_double| -> TkResult<()> {
             let last_x = tk.get_double("lastx")?;
             let last_y = tk.get_double("lasty")?;
@@ -212,7 +212,7 @@ To delete items, use the `delete` method.
 To change an item's size and position, you can use the `coords` method. You
 supply new coordinates for the item, specified the same way as when you first
 created it. Calling this method without a new set of coordinates will return the
-current coordinates of the item. You can use the `move` method to offset one or
+current coordinates of the item. You can use the `move_` method to offset one or
 more items horizontally or vertically from their current position.
 
 All items are ordered from top to bottom in what's called the stacking order. If

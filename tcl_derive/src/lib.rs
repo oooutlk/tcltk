@@ -252,12 +252,60 @@ pub fn proc( _args: TokenStream, input: TokenStream ) -> TokenStream {
     }
 }
 
-fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, item_fn: ItemFn ) -> TokenStream {
+const BAD_INPUT: &'static str = "tclfn!()/tclosure!()'s closure inputs should be `id` or `id:type`.";
+
+const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-event-arguments.";
+
+fn set_id_type_pat( pat: &mut Pat, ident: Ident, ty: Type ) {
+    *pat = Pat::Type( PatType {
+        attrs       : vec![],
+        pat         : Box::new( Pat::Ident( PatIdent{
+            attrs       : vec![],
+            by_ref      : None,
+            mutability  : None,
+            ident       ,
+            subpat      : None, })),
+        colon_token : Colon( Span::call_site() ),
+        ty          : Box::new( ty ),
+    });
+}
+
+fn id_of_pat( pat: &Pat ) -> Option<Ident> {
+    match pat {
+        Pat::Ident( pat_ident ) => Some( pat_ident.ident.clone() ),
+        _ => None,
+    }
+}
+
+fn push_special_id_in_pat_ty( args: &mut String, pat_ty: &PatType ) {
+    match id_of_pat( &*pat_ty.pat ) {
+        Some( id ) => match tk_event_detail_name_and_type( &id ) {
+            Some((name, _)) => args.push_str( name ),
+            None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
+        }
+        None => panic!( "{BAD_INPUT}" ),
+    }
+}
+
+fn translate_special_fn_args<'a>( args: Option<Expr>, fn_arg: impl Iterator<Item=&'a mut FnArg> ) -> Expr {
+    args.unwrap_or_else( || {
+        let mut args = String::new();
+        for arg in fn_arg {
+            match arg {
+                FnArg::Receiver(_) => panic!(),
+                FnArg::Typed( pat_ty ) => push_special_id_in_pat_ty( &mut args, pat_ty ),
+            }
+        }
+        parse_quote!( #args )
+    })
+}
+
+fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut item_fn: ItemFn ) -> TokenStream {
     let ident = &item_fn.sig.ident;
-    let inputs = &item_fn.sig.inputs;
+    let inputs = &mut item_fn.sig.inputs;
 
     let cmd = cmd.unwrap_or_else( || parse_quote!{ stringify!( #ident )});
-    let args = args.unwrap_or_else( || parse_quote!( "" ));
+    let args = translate_special_fn_args( args, inputs.iter_mut() );
 
     let mut default_values = Vec::<>::with_capacity( inputs.len() );
     for arg in inputs.iter().rev() {
@@ -342,9 +390,15 @@ fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, item_fn: It
 /// 2. cmd, the name of the command being registered in Tcl. Optional.
 ///
 /// 3. args, the arguments provided in Tcl on executing the command. Optional.
+/// You can provide `args` if you don't want this macro to interpret `evt_*`/`vldt_*` arguments as Tk event callback arguments.
 ///
 /// 4. func, the function defined in Rust.
 ///   Note: an attribute `#[default(value)]` on an parameter will assign a default `value` for this parameter.
+///
+/// Without `args` given, some special arguments starting with `evt_` or `vldt_` will be treated as predefined Tk event
+/// callback arguments. The annotated types can be substituted by different types.
+///
+/// See `tclosure!()`'s doc comments for more.
 ///
 /// # Output
 ///
@@ -390,7 +444,7 @@ pub fn tclfn( input: TokenStream ) -> TokenStream {
                         input.parse::<Token![:]>()?;
                         args = Some( input.parse::<Expr>()? );
                     },
-                    _ => panic!( "unsupported named arguments of tclosure!(), should be `cmd` or `args`."),
+                    _ => panic!( "unsupported named arguments of tclfn!(), should be `cmd` or `args`."),
                 }
                 input.parse::<Token![,]>()?;
             }
@@ -404,8 +458,31 @@ pub fn tclfn( input: TokenStream ) -> TokenStream {
     callback_fn( interp, cmd, args, func )
 }
 
+fn translate_special_closure_args<'a>( args: Option<Expr>, pats: impl Iterator<Item=&'a mut Pat> ) -> Expr {
+    args.unwrap_or_else( || {
+        let mut args = String::new();
+        for pat in pats {
+            match pat {
+                Pat::Type( pat_ty ) => push_special_id_in_pat_ty( &mut args, pat_ty ),
+                Pat::Ident( pat_ident ) => {
+                    let ident = pat_ident.ident.clone();
+                    match tk_event_detail_name_and_type( &ident ) {
+                        Some((name, ty)) => {
+                            args.push_str( name );
+                            set_id_type_pat( pat, ident, ty );
+                        }
+                        None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
+                    }
+                }
+                _ => panic!( "{BAD_INPUT}" ),
+            }
+        }
+        parse_quote!( #args )
+    })
+}
+
 struct TclosureInput {
-    tk      : Expr,
+    interp  : Expr,
     cmd     : Option<Expr>,
     args    : Option<Expr>,
     bind    : Option<Punctuated<Bind,Token![,]>>,
@@ -414,7 +491,7 @@ struct TclosureInput {
 
 impl Parse for TclosureInput {
     fn parse( input: ParseStream ) -> parse::Result<Self> {
-        let tk = input.parse::<Expr>()?;
+        let interp = input.parse::<Expr>()?;
         input.parse::<Token![,]>()?;
 
         let (mut cmd, mut args, mut bind) = (None, None, None);
@@ -441,7 +518,7 @@ impl Parse for TclosureInput {
 
         let closure = input.parse::<ExprClosure>()?;
 
-        Ok( TclosureInput{ tk, cmd, args, bind, closure })
+        Ok( TclosureInput{ interp, cmd, args, bind, closure })
     }
 }
 
@@ -478,20 +555,17 @@ fn tk_event_detail_name_and_type( id: &Ident ) -> Option<(&'static str, Type)> {
         "evt_window_path"    => Some((" %W", parse_quote!( String                  ))),
         "evt_rootx"          => Some((" %X", parse_quote!( std::ffi::c_int         ))),
         "evt_rooty"          => Some((" %Y", parse_quote!( std::ffi::c_int         ))),
+        "vldt_action"        => Some((" %d", parse_quote!( tk::event::TkValidatingAction ))),
+        "vldt_index"         => Some((" %i", parse_quote!( std::ffi::c_int               ))),
+        "vldt_new"           => Some((" %P", parse_quote!( String                        ))),
+        "vldt_old"           => Some((" %s", parse_quote!( String                        ))),
+        "vldt_text"          => Some((" %S", parse_quote!( String                        ))),
+        "vldt_set"           => Some((" %v", parse_quote!( tk::event::TkValidationSet    ))),
+        "vldt_op"            => Some((" %V", parse_quote!( tk::event::TkValidationOp     ))),
+        "vldt_name"          => Some((" %W", parse_quote!( String                        ))),
         _ => None,
     }
 }
-
-fn id_of_pat( pat: &Pat ) -> Option<Ident> {
-    match pat {
-        Pat::Ident( pat_ident ) => Some( pat_ident.ident.clone() ),
-        _ => None,
-    }
-}
-
-const BAD_INPUT: &'static str = "tclosure!()'s closure inputs should be `id` or `id:type`.";
-
-const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-event-arguments.";
 
 /// Helps to register rust closures as Tcl commands or Tk event callbacks.
 ///
@@ -507,15 +581,17 @@ const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-even
 /// the same `cmd` name.
 ///
 /// 3. args, the arguments provided in Tcl on executing the command. Optional.
-/// You can provide `args` if you don't want this macro to interpret `evt_*` closure arguments as Tk event callback arguments.
+/// You can provide `args` if you don't want this macro to interpret `evt_*`/`vldt_*` arguments as Tk event callback arguments.
 ///
 /// 4. bind list, for cloning data into the closure, which is similar inside `bind::bind!()`. Optional.
 ///
 /// 5. closure, the closure defined in Rust. Its capture must be `move` and `move` keywords could be omitted.
 ///   Note: an attribute `#[default(value)]` on a parameter will assign a default `value` for this parameter.
 ///
-/// Without `args` given, the closure's input arguments which starts with `evt_` will be treated as predefined Tk event callback
-/// arguments. The annotated types can be omitted or substituted by different types.
+/// Without `args` given, some special arguments starting with `evt_` or `vldt_` will be treated as predefined Tk event
+/// callback arguments. The annotated types can be omitted or substituted by different types.
+///
+/// ## Tk Event details
 ///
 /// * evt_serial: c_int
 ///
@@ -658,6 +734,41 @@ const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-even
 /// KeyPress, KeyRelease, Leave and Motion events. Same meaning as evt_x and evt_y, except relative to the (virtual) root
 /// window.
 ///
+/// ## Validation details
+///
+/// * vldt_action: tk::event::TkValidatingAction
+///
+/// Type of action.
+///
+/// * vldt_index: c_int
+///
+/// Index of char string to be inserted/deleted, if any, otherwise -1.
+///
+/// * vldt_new: String
+///
+/// The value of the entry if the edit is allowed. If you are configuring the entry widget to have a new textvariable, this
+/// will be the value of that textvariable.
+///
+/// * vldt_old: String
+///
+/// The current value of entry prior to editing.
+///
+/// * vldt_text: String
+///
+/// The text string being inserted/deleted.
+///
+/// * vldt_set: tk::event::TkValidationSet
+///
+/// The type of validation currently set.
+///
+/// * vldt_op:  tk::event::TkValidationOp
+///
+/// The type of validation that triggered the callback (key, focusin, focusout, forced).
+///
+/// * vldt_name: String
+///
+/// The name of the entry widget.
+///
 /// # Output
 ///
 /// Returns a `String` of the command name.
@@ -666,9 +777,7 @@ const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-even
 ///
 /// ```rust,no_run
 /// widget.bind( button_press_2(),
-///     tclosure!( tk, |evt_x, evt_y| -> TkResult<()> {
-///         Ok( tk.popup( menu, evt_x, evt_y, None )? )
-///     })
+///     tclosure!( tk, |evt_x, evt_y| tk.popup( menu, evt_x, evt_y, None ))
 /// )?;
 /// ```
 ///
@@ -683,7 +792,7 @@ const MIX_UP: &'static str = "Not allowed to mix up event-arguments and non-even
 /// ```
 #[proc_macro]
 pub fn tclosure( input: TokenStream ) -> TokenStream {
-    let TclosureInput{ tk, cmd, args, bind, mut closure } = parse_macro_input!( input as TclosureInput );
+    let TclosureInput{ interp, cmd, args, bind, mut closure } = parse_macro_input!( input as TclosureInput );
     let bind = bind.unwrap_or_default();
     let bind = bind.iter();
 
@@ -704,42 +813,7 @@ pub fn tclosure( input: TokenStream ) -> TokenStream {
     }
     let non_variadic_argc = if is_variadic { argc-1 } else { argc };
 
-    let args = args.unwrap_or_else( || {
-        let mut args = String::new();
-        for pat in closure.inputs.iter_mut() {
-            match pat {
-                Pat::Type( pat_ty ) => match id_of_pat( &*pat_ty.pat ) {
-                    Some( id ) => match tk_event_detail_name_and_type( &id ) {
-                        Some((name, _)) => args.push_str( name ),
-                        None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
-                    }
-                    None => panic!( "{BAD_INPUT}" ),
-                }
-                Pat::Ident( pat_ident ) => {
-                    let ident = pat_ident.ident.clone();
-                    match tk_event_detail_name_and_type( &ident ) {
-                        Some((name, ty)) => {
-                            args.push_str( name );
-                            *pat = Pat::Type( PatType {
-                                attrs       : vec![],
-                                pat         : Box::new( Pat::Ident( PatIdent{
-                                    attrs       : vec![],
-                                    by_ref      : None,
-                                    mutability  : None,
-                                    ident       ,
-                                    subpat      : None, })),
-                                colon_token : Colon( Span::call_site() ),
-                                ty          : Box::new( ty ),
-                            });
-                        }
-                        None => if !args.is_empty() { panic!( "{MIX_UP}" ); }
-                    }
-                }
-                _ => panic!( "{BAD_INPUT}" ),
-            }
-        }
-        parse_quote!( #args )
-    });
+    let args = translate_special_closure_args( args, closure.inputs.iter_mut() );
 
     let body = &*closure.body;
     let expr_block: ExprBlock = if let Expr::Block( block ) = body {
@@ -853,11 +927,16 @@ pub fn tclosure( input: TokenStream ) -> TokenStream {
     body.stmts.extend( existing_stmts );
 
     let uuid = make_ident( &format!( "__tcl_closure_wrapper_{}", Uuid::new_v4().simple() ));
-    let cmd = cmd.unwrap_or_else( || parse_quote!("") );
+
+    let (cmd, random_value) = if cmd.is_some() {
+        (cmd.unwrap(), 0_u64)
+    } else {
+        (parse_quote!(""), Uuid::new_v4().as_u64_pair().1)
+    };
 
     let proc_definition: Vec<Stmt> = if default_values.is_empty() {
         parse_quote!{
-             (#tk).def_proc_with_client_data( cmd.as_str(), #uuid, client_data, Some( __deleter ));
+             (#interp).def_proc_with_client_data( cmd.as_str(), #uuid, client_data, Some( __deleter ));
         }
     } else {
         let name: Expr = parse_quote!{ &format!( "__tcl_fn_{}", stringify!( #uuid ))};
@@ -874,14 +953,12 @@ pub fn tclosure( input: TokenStream ) -> TokenStream {
         let params = (0..argc).fold( String::new(), |acc,n| format!( "{acc} $arg{n}" ));
 
         parse_quote!{
-            (#tk).def_proc_with_client_data( #name, #uuid, client_data, Some( __deleter ));
-            (#tk).run(
+            (#interp).def_proc_with_client_data( #name, #uuid, client_data, Some( __deleter ));
+            (#interp).run(
                 format!( "proc {} {{ {} }} {{ {} {} }}", cmd, #param_list, #name, #params )
             ).ok();
         }
     };
-
-    let (_, random_value) = Uuid::new_v4().as_u64_pair();
 
     let expanded = quote!{{
         #(#bind)*

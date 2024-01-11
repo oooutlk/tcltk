@@ -65,7 +65,7 @@ fn main() -> TkResult<()> {
 
     Widget::bind( &canvas, event::button_press_1(),
         "set lastx [.canvas canvasx %x]; set lasty [.canvas canvasy %y]" )?;
-    Widget::bind( &canvas, event::button_1().motion(), tkbind!( tk,
+    Widget::bind( &canvas, event::button_1().motion(), tclosure!( tk,
         |evt_x:c_double, evt_y:c_double| -> TkResult<()> {
             let x = canvas.canvasx( evt_x, None )?;
             let y = canvas.canvasy( evt_y, None )?;
@@ -95,7 +95,7 @@ fn main() -> TkResult<()> {
     Widget::bind(
         &canvas,
         event::button_1().button_release(),
-        tkbind!( tk, || ->TkResult<()> {
+        tclosure!( tk, || ->TkResult<()> {
             Ok( canvas.itemconfigure( item_tag( "currentline" ), -width(1) )? )
         })
     )?;
@@ -104,19 +104,19 @@ fn main() -> TkResult<()> {
         -fill("red") -tags("palette palettered") )?;
     canvas.bind( id,
         event::button_press_1(),
-        tkbind!( tk, || { tk.set( "color", "red" ); Ok(()) }))?;
+        tclosure!( tk, || { tk.set( "color", "red" ); Ok(()) }))?;
 
     let id = canvas.create_rectangle( 10.0, 35.0, 30.0, 55.0,
         -fill("blue") -tags("palette paletteblue") )?;
     canvas.bind( id,
         event::button_press_1(),
-        tkbind!( tk, || { tk.set( "color", "blue" ); Ok(()) }))?;
+        tclosure!( tk, || { tk.set( "color", "blue" ); Ok(()) }))?;
 
     let id = canvas.create_rectangle( 10.0, 60.0, 30.0, 80.0,
         -fill("black") -tags("palette paletteblack paletteSelected") )?;
     canvas.bind( id,
         event::button_press_1(),
-        tkbind!( tk, || { tk.set( "color", "black" ); Ok(()) }))?;
+        tclosure!( tk, || { tk.set( "color", "black" ); Ok(()) }))?;
 
     tk.set( "color", "black" );
     canvas.itemconfigure( item_tag( "palette" ), -width(5) )?;

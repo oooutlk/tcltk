@@ -47,7 +47,7 @@ fn main() -> TkResult<()> {
         menu.add_command( -label(i) )?;
     }
 
-    let handler = tkbind!( tk,
+    let handler = tclosure!( tk,
         |evt_rootx, evt_rooty| -> TkResult<()> {
             Ok( tk.popup( menu, evt_rootx, evt_rooty, None )? )
         }

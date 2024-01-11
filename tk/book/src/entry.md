@@ -92,10 +92,10 @@ the entry on any keystroke, which is specified by providing a value of `key` to
 the `validate` configuration option.
 
 ```rust,no_run
-let validate_cmd = tclfn!( &tk, args: "%P",
-    fn check_num( new_val: String ) -> TclResult<bool> {
-       Ok( new_val.len() <= 5 &&
-           new_val.chars().filter( |&ch| ch >= '0' && ch <= '9' ).count() <= 5 )
+let validate_cmd = tclfn!( &tk,
+    fn check_num( vldt_new: String ) -> TclResult<bool> {
+       Ok( vldt_new.len() <= 5 &&
+           vldt_new.chars().filter( |&ch| ch >= '0' && ch <= '9' ).count() <= 5 )
     }
 );
 
@@ -146,8 +146,8 @@ let f_btn = f.add_ttk_button( "btn" -text("Process") )?
 
 f_btn.set_state( TtkState::Disabled )?;
 
-let check_zip_cmd = tkbind!( tk, cmd: "check_zip", args: "%P %V",
-    move |new_val: String, op: String| -> TkResult<bool> {
+let check_zip_cmd = tclosure!( tk, cmd: "check_zip",
+    |vldt_new, vldt_op| -> TkResult<bool> {
         let interp = tcl_interp!();
         interp.set( "errmsg", "" );
 

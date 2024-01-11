@@ -8,6 +8,9 @@ use crate::{
         TkEventTypeError,
         TkNotifyModeParseError,
         TkPlaceOnParseError,
+        TkValidationSetParseError,
+        TkValidationOpParseError,
+        TkValidatingActionError,
     },
     opt::{
         OptPair,
@@ -410,6 +413,43 @@ impl<Inst:TkInstance> Widget<Inst> {
     }
 }
 
+macro_rules! i32enum_obj_conversion {
+    ($ty:ident, $err:ident) => {
+        impl From<$ty> for Obj {
+            fn from( ty: $ty ) -> Obj {
+                i32::from( ty ).into()
+            }
+        }
+
+        impl TryFrom<Obj> for $ty {
+            type Error = $err;
+            fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
+                Self::try_from(
+                    i32::try_from( obj.clone() )
+                        .map_err( |_| $err( obj.clone() ))? )
+                    .map_err( |_| $err( obj ))
+            }
+        }
+    }
+}
+
+macro_rules! strum_obj_conversion {
+    ($ty:ident, $err:ident) => {
+        impl From<$ty> for Obj {
+            fn from( notify_mode: $ty ) -> Obj {
+                notify_mode.to_string().into()
+            }
+        }
+
+        impl TryFrom<Obj> for $ty {
+            type Error = $err;
+            fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
+                obj.get_string().parse().map_err( |_| $err( obj.clone() ))
+            }
+        }
+    }
+}
+
 #[derive( Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive )]
 #[repr( i32 )]
 pub enum ButtonNo {
@@ -420,22 +460,7 @@ pub enum ButtonNo {
     Button5 = 5,
 }
 
-impl From<ButtonNo> for Obj {
-    fn from( button_no: ButtonNo ) -> Obj {
-        i32::from( button_no ).into()
-    }
-}
-
-impl TryFrom<Obj> for ButtonNo {
-    type Error = TkButtonNoError;
-    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
-        Self::try_from(
-            i32::try_from( obj.clone() )
-                .map_err( |_| TkButtonNoError( obj.clone() ))? )
-            .map_err( |_| TkButtonNoError( obj ))
-    }
-}
-
+i32enum_obj_conversion!{ ButtonNo, TkButtonNoError }
 
 #[derive( Debug, strum_macros::Display, strum_macros::EnumString )]
 pub enum TkNotifyMode {
@@ -445,18 +470,7 @@ pub enum TkNotifyMode {
     NotifyWhileGrabbed
 }
 
-impl From<TkNotifyMode> for Obj {
-    fn from( notify_mode: TkNotifyMode ) -> Obj {
-        notify_mode.to_string().into()
-    }
-}
-
-impl TryFrom<Obj> for TkNotifyMode {
-    type Error = TkNotifyModeParseError;
-    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
-        obj.get_string().parse().map_err( |_| TkNotifyModeParseError( obj.clone() ))
-    }
-}
+strum_obj_conversion!{ TkNotifyMode, TkNotifyModeParseError }
 
 #[derive( Debug, strum_macros::Display, strum_macros::EnumString )]
 pub enum TkPlaceOn {
@@ -464,18 +478,7 @@ pub enum TkPlaceOn {
     PlaceOnBottom,
 }
 
-impl From<TkPlaceOn> for Obj {
-    fn from( place_on: TkPlaceOn ) -> Obj {
-        place_on.to_string().into()
-    }
-}
-
-impl TryFrom<Obj> for TkPlaceOn {
-    type Error = TkPlaceOnParseError;
-    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
-        obj.get_string().parse().map_err( |_| TkPlaceOnParseError( obj.clone() ))
-    }
-}
+strum_obj_conversion!{ TkPlaceOn, TkPlaceOnParseError }
 
 #[derive( Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive )]
 #[repr( i32 )]
@@ -516,18 +519,39 @@ pub enum TkEventType {
     GenericEvent        = 35,
 }
 
-impl From<TkEventType> for Obj {
-    fn from( event_type: TkEventType ) -> Obj {
-        i32::from( event_type ).into()
-    }
+i32enum_obj_conversion!{ TkEventType, TkEventTypeError }
+
+// evt_validate_action %d
+#[derive( Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive )]
+#[repr( i32 )]
+pub enum TkValidatingAction {
+    Insert = 1,
+    Delete = 0,
+    FocusOrForcedOrTextvariable  = -1,
 }
 
-impl TryFrom<Obj> for TkEventType {
-    type Error = TkEventTypeError;
-    fn try_from( obj: Obj ) -> Result<Self, Self::Error> {
-        Self::try_from(
-            i32::try_from( obj.clone() )
-                .map_err( |_| TkEventTypeError( obj.clone() ))? )
-            .map_err( |_| TkEventTypeError( obj ))
-    }
+i32enum_obj_conversion!{ TkValidatingAction, TkValidatingActionError }
+
+#[derive( Debug, strum_macros::Display, strum_macros::EnumString )]
+#[strum( serialize_all = "lowercase" )]
+pub enum TkValidationSet {
+    None,
+    Focus,
+    FocusIn,
+    FocusOut,
+    Key,
+    All,
 }
+
+strum_obj_conversion!{ TkValidationSet, TkValidationSetParseError }
+
+#[derive( Debug, strum_macros::Display, strum_macros::EnumString )]
+#[strum( serialize_all = "lowercase" )]
+pub enum TkValidationOp {
+    FocusIn,
+    FocusOut,
+    Forced,
+    Key,
+}
+
+strum_obj_conversion!{ TkValidationOp, TkValidationOpParseError }
