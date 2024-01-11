@@ -377,7 +377,7 @@ fn callback_fn( interp: Expr, cmd: Option<Expr>, args: Option<Expr>, mut item_fn
     expanded.into()
 }
 
-/// Helps to register rust functions as Tcl commands.
+/// Helps to register rust functions as Tcl commands, or Tk event callbacks.
 ///
 /// # Syntax
 ///
@@ -570,6 +570,10 @@ fn tk_event_detail_name_and_type( id: &Ident ) -> Option<(&'static str, Type)> {
 /// Helps to register rust closures as Tcl commands or Tk event callbacks.
 ///
 /// # Syntax
+///
+/// `tclosure!( interp, cmd, args, bind, closure )`
+///
+/// or more precisely:
 ///
 /// `tclosure!( $interp:expr, cmd:$cmd:expr, args:$args:expr, bind:($($bind: bind_syn::Bind),*), $closure:expr )`
 ///
@@ -992,7 +996,8 @@ pub fn tclosure( input: TokenStream ) -> TokenStream {
 
         let client_data = Box::into_raw( closure ) as tcl::reexport_clib::ClientData;
 
-        let address_as_name = format!( "__tkbind_closure_{:?}", #random_value.wrapping_add( client_data as u64 ));
+        let address_as_name = format!( "__tclosure_{:?}", #random_value.wrapping_add( client_data as u64 ));
+
         let cmd = if (#cmd).is_empty() {
             address_as_name
         } else {

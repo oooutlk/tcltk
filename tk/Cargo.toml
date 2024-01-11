@@ -1,6 +1,6 @@
 [package]
 name = "tk"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -18,8 +18,8 @@ cex = "0.5"
 clib = "0.2.4"
 heredom = "0.1"
 serde = { version = "1.0", features=["derive"] }
-tcl = { path = "../tcl", version = "0.1.7" }
-tcl_derive = { path = "../tcl_derive", version = "0.1.3" }
+tcl = { path = "../tcl", version = "0.1.8" }
+tcl_derive = { path = "../tcl_derive", version = "0.1.4" }
 tuplex = "0.1"
 strum = "0.19"
 strum_macros = "0.19"
