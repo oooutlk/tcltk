@@ -1,6 +1,6 @@
 [package]
 name = "tk"
-version = "0.1.9"
+version = "0.1.10"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -27,7 +27,7 @@ once_cell = "1.17.1"
 num_enum = "0.7.1"
 
 [build-dependencies]
-inwelling = "0.5"
+inwelling = "0.5.2"
 
 [dev-dependencies]
 regex = "1.7.1"

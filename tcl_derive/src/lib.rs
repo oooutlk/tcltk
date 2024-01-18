@@ -548,6 +548,7 @@ fn tk_event_detail_name_and_type( id: &Ident ) -> Option<(&'static str, Type)> {
         "evt_keysym"         => Some((" %K", parse_quote!( char                    ))),
         "evt_matches"        => Some((" %M", parse_quote!( std::ffi::c_int         ))),
         "evt_keysym_decimal" => Some((" %N", parse_quote!( std::ffi::c_int         ))),
+        "evt_key"            => Some((" %N", parse_quote!( tk::TkKey               ))),
         "evt_property"       => Some((" %P", parse_quote!( String                  ))),
         "evt_root"           => Some((" %R", parse_quote!( std::ffi::c_int         ))),
         "evt_subwindow"      => Some((" %S", parse_quote!( std::ffi::c_int         ))),

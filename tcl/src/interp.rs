@@ -15,7 +15,6 @@ use crate::{
 };
 
 use std::{
-    env,
     ffi::CString,
     mem,
     ops::Deref,
@@ -157,7 +156,7 @@ impl Interp {
     pub fn eval_with_flags( &self, code: impl Into<Obj>, flags: c_int ) -> Result<Obj> {
         let code = code.into();
         #[cfg( debug_assertions )] {
-            for (name, value) in env::vars() {
+            for (name, value) in std::env::vars() {
                 if name == "TCL_DISPLAY_RUNNING_COMMANDS" {
                     match value.as_str() {
                         "stdout" =>  println!( "{code}" ),
@@ -622,6 +621,176 @@ impl Interp {
     /// encodings (utf-8, unicode).
     pub fn source( &self, path: impl AsRef<Path> ) -> Result<Obj> {
         self.eval(( "source", path.as_ref().to_string_lossy() ))
+    }
+
+    /// Returns true if the interp is "safe".
+    pub fn is_safe( &self ) -> bool {
+        unsafe {
+            clib::Tcl_IsSafe( self.as_ptr() ) != 0
+        }
+    }
+
+    /// Marks interp as “safe”, so that future calls to `Interp::is_safe()` will return
+    /// true. It also removes all known potentially-unsafe core functionality (both
+    /// commands and variables) from interp. However, it cannot know what parts of an
+    /// extension or application are safe and does not make any attempt to remove those
+    /// parts, so safety is not guaranteed after calling `Interp::make_safe()`. Callers
+    /// will want to take care with their use of `Interp::make_safe()` to avoid false
+    /// claims of safety. For many situations, `Interp::create_child()` may be a better
+    /// choice, since it creates interpreters in a known-safe state.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use tcl::*;
+    /// let interpreter = Interpreter::new().unwrap();
+    /// assert!( !interpreter.is_safe() );
+    /// interpreter.make_safe().unwrap();
+    /// assert!( interpreter.is_safe() );
+    /// ```
+    pub fn make_safe( &self ) -> Result<()> {
+        unsafe {
+            clib::Tcl_MakeSafe( self.as_ptr() ).code_to_result( self )
+        }
+    }
+
+    /// Creates a new interpreter as a child of interp. It also creates a child command
+    /// named `name` in interp which allows interp to manipulate the new child. If
+    /// `is_safe` is false, the command creates a trusted child in which Tcl code has
+    /// access to all the Tcl commands. If it is true, the command creates a "safe"
+    /// child in which Tcl code has access only to set of Tcl commands defined as
+    /// "Safe Tcl"; see the manual entry for the Tcl interp command for details.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use tcl::*;
+    /// let interpreter = Interpreter::new().unwrap();
+    /// let unsafe_child = interpreter.create_child( "an_unsafe_child", false ).unwrap();
+    /// unsafe_child.run("puts {hello,world!}").unwrap(); // ok
+    /// let safe_child = interpreter.create_child( "a_safe_child", true ).unwrap();
+    /// assert!( safe_child.run("puts {hello,world!}").is_err() ); // safe interp not allowed to output
+    /// ```
+    pub fn create_child( &self, name: &str, is_safe: bool ) -> Result<Interpreter, NullInterp> {
+        let name = CString::new( name )
+            .expect("tcl::Interp::create_child(): child interp's name should be CString.");
+        unsafe {
+            Ok( Interpreter( Interp::from_raw( clib::Tcl_CreateSlave(
+                self.as_ptr(),
+                name.as_c_str().as_ptr(),
+                is_safe as c_int
+            ))? ))
+        }
+    }
+
+    /// Returns a child interp, which is identified by childName.
+    ///
+    /// # Safety
+    ///
+    /// Don't access to the child `Interp` after the dropping of child `Interpreter`.
+    ///
+    /// ```rust,no_run
+    /// use tcl::*;
+    /// let interpreter = Interpreter::new().unwrap();
+    /// let child_interp;
+    /// {
+    ///     let child_interpreter = interpreter.create_child( "a_child_interp", false ).unwrap();
+    ///     child_interpreter.run("puts {hello,world!}").unwrap(); // ok
+    ///     child_interp = unsafe{ interpreter.get_child( "a_child_interp" ).unwrap() };
+    ///     child_interp.run("puts {hello,world!}").unwrap(); // ok
+    /// }
+    /// // DO NOT DO THIS: child_interp.run("puts {hello,world!}").unwrap(); // oops!
+    /// ```
+    pub unsafe fn get_child( &self, name: &str ) -> Option<Interp> {
+        let name = CString::new( name )
+            .expect("tcl::Interp::get_child(): child interp's name should be CString.");
+        Interp::from_raw( clib::Tcl_GetSlave(
+            self.as_ptr(),
+            name.as_c_str().as_ptr()
+        )).ok()
+    }
+
+    /// Returns the parent interp.
+    ///
+    /// # Safety
+    ///
+    /// Don't access to the parent `Interp` after the dropping of parent `Interpreter`.
+    ///
+    /// ```rust,no_run
+    /// use tcl::*;
+    /// let parent_interp;
+    /// {
+    ///     let parent_interpreter = Interpreter::new().unwrap();
+    ///     let child_interpreter = parent_interpreter.create_child( "a_child_interp", false ).unwrap();
+    ///     parent_interp = unsafe{ child_interpreter.get_parent().unwrap() };
+    ///     parent_interp.run("puts {hello,world!}").unwrap(); // ok
+    /// }
+    /// // DO NOT DO THIS: parent_interp.run("puts {hello,world!}").unwrap(); // oops!
+    /// ```
+    pub unsafe fn get_parent( &self ) -> Option<Interp> {
+        Interp::from_raw( clib::Tcl_GetMaster(
+            self.as_ptr(),
+        )).ok()
+    }
+
+    /// Moves the command named `hidden_cmd_name` from the set of hidden commands to the
+    /// set of exposed commands, putting it under the name `cmd_name`. `hidden_cmd_name`
+    /// must be the name of an existing hidden command, or `Err` will be returned.
+    /// `cmd_name` already exists, the operation returns `Err`. After executing this
+    /// command, attempts to use `cmd_name` in any script evaluation mechanism will
+    /// again succeed.
+    ///
+    /// ```rust
+    /// use tcl::*;
+    /// let interpreter = Interpreter::new().unwrap();
+    /// interpreter.make_safe().unwrap();
+    /// assert!( interpreter.run("pwd").is_err() );
+    /// interpreter.expose_command( "pwd", "do_pwd" ).unwrap();
+    /// assert!( interpreter.run("do_pwd").is_ok() );
+    /// ```
+    pub fn expose_command( &self, hidden_cmd_name: &str, cmd_name: &str ) -> Result<()> {
+        let hidden_cmd_name = CString::new( hidden_cmd_name )
+            .expect("tcl::Interp::expose_command(): hidden_cmd_name should be CString.");
+        let cmd_name = CString::new( cmd_name )
+            .expect("tcl::Interp::expose_command(): cmd_name should be CString.");
+        unsafe {
+            clib::Tcl_ExposeCommand(
+                self.as_ptr(),
+                hidden_cmd_name.as_c_str().as_ptr(),
+                       cmd_name.as_c_str().as_ptr()
+            ).code_to_result( self )
+        }
+    }
+
+    /// Moves the command named `cmd_name` from the set of exposed commands to the set
+    /// of hidden commands, under the name `hidden_cmd_name`. `cmd_name` must be the
+    /// name of an existing exposed command, or `Err` will be returned. Currently both
+    /// `cmd_name` and `hidden_cmd_name` must not contain namespace qualifiers, or `Err`
+    /// will be returned. The `cmd_name` will be looked up in the global namespace, and
+    /// not relative to the current namespace, even if the current namespace is not the
+    /// global one. If a hidden command whose name is `hidden_cmd_name` already exists,
+    /// `Err` will also be returned. After executing this command, attempts to use
+    /// `cmd_name` in any script evaluation mechanism will fail.
+    ///
+    /// ```rust
+    /// use tcl::*;
+    /// let interpreter = Interpreter::new().unwrap();
+    /// assert!( interpreter.run("pwd").is_ok() );
+    /// interpreter.hide_command( "pwd", "hide_pwd" ).unwrap();
+    /// assert!( interpreter.run("pwd").is_err() );
+    /// ```
+    pub fn hide_command( &self, cmd_name: &str, hidden_cmd_name: &str ) -> Result<()> {
+        let cmd_name = CString::new( cmd_name )
+            .expect("tcl::Interp::hide_command(): cmd_name should be CString.");
+        let hidden_cmd_name = CString::new( hidden_cmd_name )
+            .expect("tcl::Interp::hide_command(): hidden_cmd_name should be CString.");
+        unsafe {
+            clib::Tcl_HideCommand(
+                self.as_ptr(),
+                       cmd_name.as_c_str().as_ptr(),
+                hidden_cmd_name.as_c_str().as_ptr()
+            ).code_to_result( self )
+        }
     }
 }
 

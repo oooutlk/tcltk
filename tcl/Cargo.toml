@@ -1,6 +1,6 @@
 [package]
 name = "tcl"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["oooutlk <oooutlk@outlook.com>"]
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -21,7 +21,7 @@ enumx = "0.4"
 cex = "0.5"
 
 [build-dependencies]
-inwelling = "0.5"
+inwelling = "0.5.2"
 
 [package.metadata.inwelling.clib]
 build = ["tcl86"]

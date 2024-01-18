@@ -438,7 +438,7 @@ impl<Inst:TkInstance> TkCanvas<Inst> {
     }
 
     pub fn delete<ListOfTagOrId,TupleOfTagOrId>( &self, list_of_tag_or_id: ListOfTagOrId ) -> InterpResult<()>
-        where ListOfTagOrId: IntoHomoTuple<Obj>
+        where ListOfTagOrId: IntoHomoTuple<Obj> + NonZeroLen<TupleOfTagOrId>
             , <ListOfTagOrId as IntoHomoTuple<Obj>>::Output : Into<Obj>
     {
         self.tk().run(( "eval", self.path, "delete", list_of_tag_or_id.into_homo_tuple() ))

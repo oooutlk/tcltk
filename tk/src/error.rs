@@ -77,6 +77,10 @@ impl_std_error!{ TkGeometryParseError }
 pub struct TkIndexParseError( pub String );
 impl_std_error!{ TkIndexParseError }
 
+pub struct TkInvalidKeySym( pub Obj );
+impl_std_error_and_debug!( TkInvalidKeySym,
+    "error occurred when converting {} as {}", "TkKey" );
+
 pub struct TkNotifyModeParseError( pub Obj );
 impl_std_error_and_debug!( TkNotifyModeParseError,
     "error occurred when converting {} as {}", "TkNotifyMode" );
@@ -152,6 +156,7 @@ crate_error!{
         TkEventTypeError                        ,
         TkGeometryParseError                    ,
         TkIndexParseError                       ,
+        TkInvalidKeySym                         ,
         TkNotifyModeParseError                  ,
         TkPlaceOnParseError                     ,
         TkRequesterParseError                   ,
@@ -163,7 +168,7 @@ crate_error!{
         TkTextMarkGravityParseError             ,
         TkValidatingActionError                 ,
         TkValidationSetParseError               ,
-        TkValidationOpParseError         ,
+        TkValidationOpParseError                ,
         TtkStateParseError                      ,
         UnexpectedPanedwindowIdentifyResult     ,
         UnexpectedScrollbarElementActivatedError,
