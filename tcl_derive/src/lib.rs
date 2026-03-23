@@ -165,7 +165,7 @@ impl VisitMut for TclProc {
 
                 match __tcl_inner_proc( __client_data, __tcl_interp, __objc, __objv ) {
                     Ok( value ) => unsafe {
-                        tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() );
+                        tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).as_ptr() );
                     },
                     Err( _ ) => __tcl_completion_code = tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
                 }
@@ -972,7 +972,7 @@ pub fn tclosure( input: TokenStream ) -> TokenStream {
             let closure: &mut Box<dyn Fn( tcl::reexport_clib::ClientData, *mut tcl::reexport_clib::Tcl_Interp, std::os::raw::c_int, *const *mut tcl::reexport_clib::Tcl_Obj )->#output> = unsafe{ &mut *( __client_data as *mut _ )};
             match closure( std::ptr::null_mut(), __tcl_interp, __objc, __objv ) {
                 Ok( value ) => {
-                    unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).into_raw() )};
+                    unsafe{ tcl::reexport_clib::Tcl_SetObjResult( __tcl_interp, Obj::from( value ).as_ptr() )};
                     tcl::reexport_clib::TCL_OK as std::os::raw::c_int
                 },
                 Err( _ ) => tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int,
