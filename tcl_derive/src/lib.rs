@@ -833,13 +833,11 @@ pub fn tclosure( input: TokenStream ) -> TokenStream {
         let mut __interp = unsafe{ tcl::Interp::from_raw( __tcl_interp ).unwrap() };
         let __origin_objs: &[*mut tcl::reexport_clib::Tcl_Obj] = unsafe{ std::slice::from_raw_parts( __objv.offset(1), (__objc-1) as usize )};
 
-        if __origin_objs.len() != #argc {
-            if __origin_objs.len() < #argc || !#is_variadic {
-                unsafe {
-                    tcl::reexport_clib::Tcl_WrongNumArgs( __tcl_interp, 1, __objv, std::ptr::null() );
-                    use tcl::CodeToResult;
-                    tcl::CodeToResult::code_to_result( tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int, &__interp )?;
-                }
+        if __origin_objs.len() < #non_variadic_argc && !#is_variadic {
+            unsafe {
+                tcl::reexport_clib::Tcl_WrongNumArgs( __tcl_interp, 1, __objv, std::ptr::null() );
+                use tcl::CodeToResult;
+                tcl::CodeToResult::code_to_result( tcl::reexport_clib::TCL_ERROR as std::os::raw::c_int, &__interp )?;
             }
         }
 
